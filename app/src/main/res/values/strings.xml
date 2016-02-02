@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">ImageForText</string>
+    <string-array name="list_font">
+        <item>helvetica-neue-regular.ttf</item>
+        <item>SourceSansPro-Light.ttf</item>
+        <item>uvf-funkydori.otf</item>
+        <item>uvf-slimtony.ttf</item>
+        <item>uvfnellyscriptflourish.ttf</item>
+        <item>vnf-champion-script-pro.ttf</item>
+        <item>vnf-lanvanderia-regular.ttf</item>
+        <item>vnf-leaguegothic-regular.ttf</item>
+        <item>vnf-sacramento-regular.ttf</item>
+        <item>vnf-semilla-script.ttf</item>
+        <item>vnf-sofia-regular.ttf</item>
+    </string-array>
 </resources>

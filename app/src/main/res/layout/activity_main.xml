@@ -78,58 +78,92 @@
                 android:layout_weight="0.2" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:text="HHTV" />
     </RelativeLayout>
-    <RelativeLayout
+
+    <FrameLayout
         android:id="@+id/over"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <ImageView
-            android:id="@+id/fb"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+
+        <LinearLayout
+            android:id="@+id/fb_rl"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:layout_margin="20dp"
-            android:src="@drawable/ic_fb"/>
-        <ImageView
-            android:id="@+id/inta"
+            android:layout_margin="30dp"
+            android:layout_gravity="bottom|right"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/fb"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:src="@drawable/ic_fb" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/inta_rl"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:layout_margin="20dp"
-            android:src="@drawable/ic_ins"/>
-        <ImageView
-            android:id="@+id/tw"
+            android:layout_margin="30dp"
+            android:layout_gravity="bottom|right"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/inta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:src="@drawable/ic_ins" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tw_rl"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:layout_margin="20dp"
-            android:src="@drawable/ic_tw"/>
-        <ImageView
-            android:id="@+id/setting"
+            android:layout_margin="30dp"
+            android:layout_gravity="bottom|right"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/tw"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:src="@drawable/ic_tw" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/setting_rl"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:layout_margin="20dp"
-            android:src="@drawable/ic_setting"/>
-    </RelativeLayout>
+            android:layout_gravity="bottom|right"
+            android:layout_margin="30dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/setting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:src="@drawable/ic_setting" />
+        </LinearLayout>
+    </FrameLayout>
+
     <ImageView
         android:id="@+id/grid"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
         android:layout_margin="20dp"
-        android:src="@drawable/ic_grid"/>
+        android:src="@drawable/ic_grid" />
 </RelativeLayout>
