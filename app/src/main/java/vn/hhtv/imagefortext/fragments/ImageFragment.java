@@ -11,6 +11,8 @@ import android.widget.ImageView;
 
 import com.squareup.picasso.Picasso;
 
+import vn.hhtv.imagefortext.models.Image;
+
 /**
  * Created by iservice on 1/29/16.
  */
@@ -24,9 +26,17 @@ public class ImageFragment extends Fragment{
     "http://wallpaperswide.com/download/drops_of_water-wallpaper-640x960.jpg"};
     private int color = Color.CYAN;
     String image = "";
+    private Image imageM;
 
     public static ImageFragment getInstance(int position){
         ImageFragment fragment = new ImageFragment();
+        fragment.color = fragment.colors[position % fragment.colors.length];
+        fragment.image = fragment.images[position % fragment.images.length];
+        return fragment;
+    }
+    public static ImageFragment getInstance(int position, Image image){
+        ImageFragment fragment = new ImageFragment();
+        fragment.imageM = image;
         fragment.color = fragment.colors[position % fragment.colors.length];
         fragment.image = fragment.images[position % fragment.images.length];
         return fragment;
@@ -38,6 +48,9 @@ public class ImageFragment extends Fragment{
         ImageView iv = new ImageView(container.getContext());
         iv.setScaleType(ImageView.ScaleType.FIT_XY);
         iv.setBackgroundColor(color);
+        if(imageM != null) {
+            Picasso.with(container.getContext()).load(imageM.getSource()).into(iv);
+        }else
         Picasso.with(container.getContext()).load(image).into(iv);
         return iv;
     }
