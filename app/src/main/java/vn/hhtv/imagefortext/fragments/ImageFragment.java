@@ -1,6 +1,7 @@
 package vn.hhtv.imagefortext.fragments;
 
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -8,9 +9,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
+import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.RequestCreator;
 
+import vn.hhtv.imagefortext.MainActivity;
+import vn.hhtv.imagefortext.R;
 import vn.hhtv.imagefortext.models.Image;
 
 /**
@@ -44,14 +50,33 @@ public class ImageFragment extends Fragment{
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        ImageView iv = new ImageView(container.getContext());
+    public View onCreateView(final LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View v = inflater.inflate(R.layout.image_fragment, container, false);
+        final ProgressBar pb = (ProgressBar) v.findViewById(R.id.progressBar);
+        pb.setVisibility(View.VISIBLE);
+        pb.getIndeterminateDrawable().setColorFilter(getResources().getColor(R.color.colorAccent), PorterDuff.Mode.SRC_IN);
+        final ImageView iv = (ImageView) v.findViewById(R.id.imageView);
         iv.setScaleType(ImageView.ScaleType.FIT_XY);
         iv.setBackgroundColor(color);
+        RequestCreator qc = null;
         if(imageM != null) {
-            Picasso.with(container.getContext()).load(imageM.getSource()).into(iv);
+            qc = Picasso.with(container.getContext()).load(imageM.getSource());
         }else
-        Picasso.with(container.getContext()).load(image).into(iv);
-        return iv;
+        qc = Picasso.with(container.getContext()).load(image);
+        if(qc != null){
+            qc.into(iv, new Callback() {
+                @Override
+                public void onSuccess() {
+                    pb.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onError() {
+                    pb.setVisibility(View.GONE);
+                    Picasso.with(inflater.getContext()).load("http://lorempixel.com/" + MainActivity.screenImage).skipMemoryCache().into(iv);
+                }
+            });
+        }
+        return v;
     }
 }

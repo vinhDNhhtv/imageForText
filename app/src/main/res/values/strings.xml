@@ -2,8 +2,8 @@
     <string name="app_name">ImageForText</string>
     <string name="error_tex">have error</string>
     <string name="message_network_is_unavailable">Network is unavailable</string>
-    <string name="address_found">Address fount</string>
-    <string name="no_address_found">No addredd fount</string>
+    <string name="address_found">Address found</string>
+    <string name="no_address_found">No address found</string>
     <string name="invalid_lat_long_used">Invalid lat long used</string>
     <string name="service_not_available">Service not available</string>
     <string name="no_location_data_provided">No location data provided</string>
@@ -21,4 +21,5 @@
         <item>vnf-semilla-script.ttf</item>
         <item>vnf-sofia-regular.ttf</item>
     </string-array>
+    <string name="facebook_app_id">1653623994875527</string>
 </resources>

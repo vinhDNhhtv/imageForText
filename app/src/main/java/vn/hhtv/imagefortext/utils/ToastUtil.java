@@ -12,16 +12,16 @@ public class ToastUtil {
     private static Toast toast;
 
     public static void show(String text) {
-        toast = Toast.makeText(AppApplication.get(), text, Toast.LENGTH_SHORT);
+        toast = Toast.makeText(AppApplication.get(), text, Toast.LENGTH_LONG);
         toast.show();
     }
 
     public static void show(int textId) {
-        toast = Toast.makeText(AppApplication.get(), AppApplication.get().getString(textId), Toast.LENGTH_SHORT);
+        toast = Toast.makeText(AppApplication.get(), AppApplication.get().getString(textId), Toast.LENGTH_LONG);
         toast.show();
     }
     public static void showError() {
-        toast = Toast.makeText(AppApplication.get(), AppApplication.get().getString(R.string.error_tex), Toast.LENGTH_SHORT);
+        toast = Toast.makeText(AppApplication.get(), AppApplication.get().getString(R.string.error_tex), Toast.LENGTH_LONG);
         toast.show();
     }
 

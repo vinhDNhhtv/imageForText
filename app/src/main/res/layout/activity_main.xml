@@ -3,13 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/homeRL"
     android:layout_width="match_parent"
+    android:background="@drawable/bg"
     android:layout_height="match_parent">
 
     <ProgressBar
+        android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:progressBackgroundTint="@color/colorPrimary"
         android:indeterminate="true"/>
 
     <RelativeLayout
@@ -28,7 +29,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#50000000" />
+            android:background="#70000000" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -67,7 +68,7 @@
                         android:focusable="true"
                         android:focusableInTouchMode="true"
                         android:gravity="center_vertical|center_horizontal"
-                        android:hint="Enter your text"
+                        android:hint="What do you think?"
                         android:inputType="textMultiLine|textNoSuggestions"
                         android:isScrollContainer="false"
                         android:maxLength="240"
@@ -89,12 +90,15 @@
         </LinearLayout>
         <TextView
             android:id="@+id/addressTv"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="#fff"
-            android:text="address"
+            android:visibility="gone"
+            android:drawablePadding="5dp"
+            android:drawableLeft="@drawable/ic_location"
+            android:maxLines="2"
+            android:layout_marginRight="65dp"
             android:layout_alignParentBottom="true"
-            android:layout_marginLeft="20dp"
             android:padding="20dp"
             />
     </RelativeLayout>

@@ -3,12 +3,15 @@ package vn.hhtv.imagefortext;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Geocoder;
 import android.location.Location;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -23,6 +26,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.ActionMode;
@@ -41,10 +45,20 @@ import android.view.animation.TranslateAnimation;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
+import com.facebook.share.ShareApi;
+import com.facebook.share.Sharer;
+import com.facebook.share.model.SharePhoto;
+import com.facebook.share.model.SharePhotoContent;
+import com.facebook.share.widget.ShareDialog;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
@@ -53,6 +67,7 @@ import com.google.gson.reflect.TypeToken;
 import com.loopj.android.http.TextHttpResponseHandler;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
+import com.twitter.sdk.android.tweetcomposer.TweetComposer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -71,11 +86,12 @@ import vn.hhtv.imagefortext.dialogs.SelectionFontDialog;
 import vn.hhtv.imagefortext.fragments.ImageFragment;
 import vn.hhtv.imagefortext.models.Image;
 import vn.hhtv.imagefortext.service.FetchAddressIntentService;
+import vn.hhtv.imagefortext.utils.KeyboardUtil;
 import vn.hhtv.imagefortext.utils.ToastUtil;
 import vn.hhtv.imagefortext.widget.AutoResizeEditText;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener{
+        GoogleApiClient.OnConnectionFailedListener {
 
     protected static final String TAG = "main-activity";
 
@@ -131,6 +147,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     };
     private List<Image> images;
     public static String screenResolution = "720x1280";
+    public static String screenImage = "720/1280/";
     private ImagePageAdapter mPageAdapter;
 
     private ImageView mGridBtn, mFbBtn, mInsBtn, mTwBtn, mSettingBtn;
@@ -148,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int width = 0;
         int height = 0;
         try {
-            if(Build.VERSION.SDK_INT >= 13) {
+            if (Build.VERSION.SDK_INT >= 13) {
                 display.getSize(size);
                 width = size.x;
                 height = size.y;
@@ -157,33 +174,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             width = display.getWidth();
             height = display.getHeight();
         }
-        if(width > 0 && height > 0)
-        screenResolution = width + "x" + height;
+        if(width <= 0) width = 720;
+        if(height <= 0) height = 1280;
+        if (width > 0 && height > 0) {
+            screenResolution = width + "x" + height;
+            screenImage = width + "/" + height + "/";
+        }
         mHandler = new Handler();
         mViewPager = (ViewPager) findViewById(R.id.viewPager);
         mContentEdt = (AutoResizeEditText) findViewById(R.id.editText);
         mRootView = (RelativeLayout) findViewById(R.id.rootView);
         mHomeRL = (RelativeLayout) findViewById(R.id.homeRL);
         mAddressTv = (TextView) findViewById(R.id.addressTv);
-        Picasso.with(this).load("file:///android_asset/bg/bg.jpg").into(new Target(){
-
-            @Override
-            public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
-                mHomeRL.setBackgroundDrawable(new BitmapDrawable(getResources(), bitmap));
-            }
-
-            @Override
-            public void onBitmapFailed(final Drawable errorDrawable) {
-                Log.d("TAG", "FAILED");
-            }
-
-            @Override
-            public void onPrepareLoad(final Drawable placeHolderDrawable) {
-                Log.d("TAG", "Prepare Load");
-            }
-        });
         mGridBtn = (ImageView) findViewById(R.id.grid);
         mGridBtn.setOnClickListener(this);
+        ProgressBar pb = (ProgressBar) findViewById(R.id.progressBar);
+        pb.getIndeterminateDrawable().setColorFilter(getResources().getColor(R.color.colorPrimary), android.graphics.PorterDuff.Mode.MULTIPLY);
         mFbBtn = (ImageView) findViewById(R.id.fb);
         mInsBtn = (ImageView) findViewById(R.id.inta);
         mTwBtn = (ImageView) findViewById(R.id.tw);
@@ -202,13 +208,45 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 mViewPager.onTouchEvent(event);
-                if (event.getAction() == MotionEvent.ACTION_MOVE)
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
                     return true;
+                }
+                return false;
+            }
+        });
+        mViewPager.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Log.d("touch", "viewpg");
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    KeyboardUtil.hideSoftKeyboard(MainActivity.this);
+                }
+                return false;
+            }
+        });
+        mRootView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Log.d("touch", "root" + event.getAction());
+                if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_DOWN) {
+                    KeyboardUtil.hideSoftKeyboard(MainActivity.this);
+                }
+                return false;
+            }
+        });
+        mHomeRL.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Log.d("touch", "home" + event.getAction());
+                if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_DOWN) {
+                    KeyboardUtil.hideSoftKeyboard(MainActivity.this);
+                }
                 return false;
             }
         });
         mContentEdt.setHeightLimit(500);
         mViewPager.setOffscreenPageLimit(4);
+        mViewPager.setVisibility(View.GONE);
         mContentEdt.setSelected(false);
         if (Build.VERSION.SDK_INT > 10)
             mContentEdt.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
@@ -231,6 +269,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mPageAdapter = new ImagePageAdapter(getSupportFragmentManager());
         mViewPager.setAdapter(mPageAdapter);
         mResultReceiver = new AddressResultReceiver(new Handler());
+        Picasso.with(this).load("http://lorempixel.com/" + height + "/" +width +"/").into(new Target() {
+            @Override
+            public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+                if (Build.VERSION.SDK_INT >= 16)
+                    mHomeRL.setBackground(new BitmapDrawable(bitmap));
+                else
+                    mHomeRL.setBackgroundDrawable(new BitmapDrawable(bitmap));
+            }
+
+            @Override
+            public void onBitmapFailed(Drawable errorDrawable) {
+
+            }
+
+            @Override
+            public void onPrepareLoad(Drawable placeHolderDrawable) {
+
+            }
+        });
         // Set defaults, then update using values stored in the Bundle.
         mAddressRequested = false;
         updateValuesFromBundle(savedInstanceState);
@@ -238,7 +295,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buildGoogleApiClient();
     }
 
-    private void capture() {
+    private void capture(int id) {
         mContentEdt.setCursorVisible(false);
         try {
             if (bitmap != null) {
@@ -247,28 +304,105 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             Intent sharingIntent = new Intent(Intent.ACTION_SEND);
             mRootView.setDrawingCacheEnabled(true);
-            File sdcard = Environment.getExternalStorageDirectory();
-            File f = new File(sdcard, "temp.jpg");
-            FileOutputStream out = null;
-            out = new FileOutputStream(f);
-            mRootView.setDrawingCacheEnabled(true);
             bitmap = mRootView.getDrawingCache(true).copy(
                     Bitmap.Config.ARGB_8888, false);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-            out.close();
-            mRootView.setDrawingCacheEnabled(false);
-            sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f)); // imageUri
-            sharingIntent.setType("image/jpg");
+            if (id == R.id.fb_rl) {
+                Intent intent = getPackageManager().getLaunchIntentForPackage("com.facebook.katana");
+                if (intent != null) {
+                    shareFB(bitmap);
+                } else {
+                    installApp("com.facebook.katana");
+                }
+            } else if (id == R.id.tw_rl) {
+                Intent intent = getPackageManager().getLaunchIntentForPackage("com.twitter.android");
+                if (intent == null) {
+                    installApp("com.twitter.android");
+                    return;
+                }
+                File sdcard = Environment.getExternalStorageDirectory();
+                File f = new File(sdcard, "imft_tw" + System.currentTimeMillis() + " .jpg");
+                FileOutputStream out = null;
+                out = new FileOutputStream(f);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                out.close();
+                mRootView.setDrawingCacheEnabled(false);
+                sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f));
+                shareTwitter(Uri.fromFile(f));
+            } else if (id == R.id.inta_rl) {
+                Intent intent = getPackageManager().getLaunchIntentForPackage("com.instagram.android");
+                if (intent == null) {
+                    installApp("com.instagram.android");
+                    return;
+                }
+                File sdcard = Environment.getExternalStorageDirectory();
+                String filename = "imft_all" + System.currentTimeMillis() + " .jpg";
+                File f = new File(sdcard, filename);
+                FileOutputStream out = null;
+                out = new FileOutputStream(f);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                out.close();
+                mRootView.setDrawingCacheEnabled(false);
+                MediaScannerConnection.scanFile(getApplicationContext(), new String[]{f.getAbsolutePath()}, null, new MediaScannerConnection.OnScanCompletedListener() {
 
-            sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f)); // imageUri
-            startActivity(Intent.createChooser(sharingIntent, "Share Image"));
+                    @Override
+                    public void onScanCompleted(String path, Uri uri) {
+                        Intent sharingIntent = new Intent(Intent.ACTION_SEND);
+                        sharingIntent.putExtra(Intent.EXTRA_STREAM, uri); // imageUri
+                        sharingIntent.setType("image/*");
+                        sharingIntent.setPackage("com.instagram.android");
+                        sharingIntent.putExtra(Intent.EXTRA_TEXT, mContent);
+                        startActivity(Intent.createChooser(sharingIntent, "Share Image"));
+                    }
+                });
+
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
         mContentEdt.setCursorVisible(true);
     }
 
+    private void shareFB(Bitmap bitmap) {
+        SharePhoto photo = new SharePhoto.Builder()
+                .setBitmap(bitmap)
+                .build();
+        SharePhotoContent content = new SharePhotoContent.Builder()
+                .addPhoto(photo)
+                .build();
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        if (ShareDialog.canShow(SharePhotoContent.class)) {
+            ShareDialog shareDialog = new ShareDialog(this);
+            shareDialog.show(content, ShareDialog.Mode.AUTOMATIC);
+        } else {
+            ShareApi.share(content, new FacebookCallback<Sharer.Result>() {
+                @Override
+                public void onSuccess(Sharer.Result result) {
+                    ToastUtil.show("Share photo success");
+                }
+
+                @Override
+                public void onCancel() {
+
+                }
+
+                @Override
+                public void onError(FacebookException error) {
+                    ToastUtil.show("Have an error, please try again");
+                }
+            });
+        }
+    }
+
+    private void shareTwitter(Uri myImageUri) {
+        TweetComposer.Builder builder = new TweetComposer.Builder(this)
+                .text(mContent)
+                .image(myImageUri);
+        builder.show();
+    }
+
     private void checkContent() {
+        KeyboardUtil.hideSoftKeyboard(this);
+        mContentEdt.clearFocus();
         String text = mContentEdt.getText().toString();
         if (mContent.equals(text)) {
             return;
@@ -277,6 +411,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         images = null;
         mPageAdapter.notifyDataSetChanged();
         mViewPager.setAdapter(mPageAdapter);
+        mViewPager.setVisibility(View.GONE);
         RestClient.search(mContent, new TextHttpResponseHandler() {
             @Override
             public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
@@ -285,17 +420,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             @Override
             public void onSuccess(int statusCode, Header[] headers, String responseString) {
-                try{
+                try {
                     Type type = new TypeToken<List<Image>>() {
                     }.getType();
-                    images = new GsonBuilder().create().fromJson(responseString,type);
-                }catch (Exception e){
+                    images = new GsonBuilder().create().fromJson(responseString, type);
+                } catch (Exception e) {
                     images = new ArrayList<Image>();
                 }
                 mPageAdapter.notifyDataSetChanged();
+//                mPageAdapter = new ImagePageAdapter(getSupportFragmentManager());
                 mViewPager.setAdapter(mPageAdapter);
+                mViewPager.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    private void installApp(String packageName) {
+        mContentEdt.setCursorVisible(true);
+        ToastUtil.show("You must install App to share Image");
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setData(Uri.parse("market://details?id=" + packageName));
+        startActivity(intent);
     }
 
     private TextWatcher contentChange = new TextWatcher() {
@@ -330,17 +476,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 isExpand = !isExpand;
                 break;
             case R.id.fb_rl:
-                v.startAnimation(scaleClick());
-                onClick(mGridBtn);
-                capture();
-                break;
             case R.id.tw_rl:
-                v.startAnimation(scaleClick());
-                onClick(mGridBtn);
-                break;
             case R.id.inta_rl:
                 v.startAnimation(scaleClick());
                 onClick(mGridBtn);
+                capture(v.getId());
                 break;
             case R.id.setting_rl:
                 v.startAnimation(scaleClick());
@@ -350,6 +490,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void onSelected(int p, String font) {
                         Typeface type = Typeface.createFromAsset(MainActivity.this.getAssets(), "fonts/" + font);
                         mContentEdt.setTypeface(type);
+                        Paint paint = new Paint();
+                        paint.setTypeface(type); // if custom font use `TypeFace.createFromFile`
+                        paint.setTextSize(mContentEdt.getTextSize());
+                        Rect bounds = new Rect();
+                        paint.getTextBounds("What do you thing?", 0, "What do you thing?".length(), bounds);
+                        Log.d("Text Height", bounds.height() + "");
                     }
                 });
                 dialog.show(getSupportFragmentManager(), "SelectionFont");
@@ -459,7 +605,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void displayAddressOutput(){
+    private void displayAddressOutput() {
+        if (TextUtils.isEmpty(mAddressOutput)) {
+            mAddressTv.setVisibility(View.GONE);
+            return;
+        }
+        mAddressTv.setVisibility(View.VISIBLE);
         mAddressTv.setText(mAddressOutput);
     }
 
@@ -511,6 +662,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onConnected(Bundle connectionHint) {
         // Gets the best and most recent location currently available, which may be null
         // in rare cases when a location is not available.
+        Log.i(TAG, "Connected");
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
             // Determine whether a Geocoder is available.
@@ -523,9 +675,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // is set to true, but no attempt is made to fetch the address (see
             // fetchAddressButtonHandler()) . Instead, we start the intent service here if the
             // user has requested an address, since we now have a connection to GoogleApiClient.
-            if (mAddressRequested) {
-                startIntentService();
-            }
+//            if (mAddressRequested) {
+//                startIntentService();
+//            }
+            fetchAddressButtonHandler(null);
         }
     }
 
@@ -583,7 +736,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public int getCount() {
-            if(images == null) return 0;
+            if (images == null) return 0;
             return images.size();
         }
 
@@ -603,7 +756,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         /**
-         *  Receives data sent from FetchAddressIntentService and updates the UI in MainActivity.
+         * Receives data sent from FetchAddressIntentService and updates the UI in MainActivity.
          */
         @Override
         protected void onReceiveResult(int resultCode, Bundle resultData) {
@@ -614,7 +767,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             // Show a toast message if an address was found.
             if (resultCode == Constants.SUCCESS_RESULT) {
-                ToastUtil.show(getString(R.string.address_found));
+//                ToastUtil.show(getString(R.string.address_found));
             }
 
             // Reset. Enable the Fetch Address button and stop showing the progress bar.
