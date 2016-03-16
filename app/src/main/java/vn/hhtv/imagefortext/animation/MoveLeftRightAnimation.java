@@ -4,9 +4,8 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 
-import vn.hhtv.imagefortext.MainActivity;
+import vn.hhtv.imagefortext.main.MainActivity;
 
 /**
  * Created by vinh on 2/1/16.

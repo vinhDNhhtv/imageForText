@@ -1,21 +1,26 @@
 package vn.hhtv.imagefortext.fragments;
 
 import android.graphics.Color;
+import android.graphics.Point;
 import android.graphics.PorterDuff;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestCreator;
 
-import vn.hhtv.imagefortext.MainActivity;
+import vn.hhtv.imagefortext.main.MainActivity;
 import vn.hhtv.imagefortext.R;
 import vn.hhtv.imagefortext.models.Image;
 
@@ -33,6 +38,8 @@ public class ImageFragment extends Fragment{
     private int color = Color.CYAN;
     String image = "";
     private Image imageM;
+    String text = "nature";
+    private ImageView iv;
 
     public static ImageFragment getInstance(int position){
         ImageFragment fragment = new ImageFragment();
@@ -47,6 +54,11 @@ public class ImageFragment extends Fragment{
         fragment.image = fragment.images[position % fragment.images.length];
         return fragment;
     }
+    public static ImageFragment getInstance(int position, Image image, String text){
+        ImageFragment fragment = ImageFragment.getInstance(position, image);
+        fragment.text = text;
+        return fragment;
+    }
 
     @Nullable
     @Override
@@ -55,9 +67,10 @@ public class ImageFragment extends Fragment{
         final ProgressBar pb = (ProgressBar) v.findViewById(R.id.progressBar);
         pb.setVisibility(View.VISIBLE);
         pb.getIndeterminateDrawable().setColorFilter(getResources().getColor(R.color.colorAccent), PorterDuff.Mode.SRC_IN);
-        final ImageView iv = (ImageView) v.findViewById(R.id.imageView);
-        iv.setScaleType(ImageView.ScaleType.FIT_XY);
-        iv.setBackgroundColor(color);
+        iv = (ImageView) v.findViewById(R.id.imageView);
+        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        iv.setImageResource(R.drawable.bg_background);
+        changeView();
         RequestCreator qc = null;
         if(imageM != null) {
             qc = Picasso.with(container.getContext()).load(imageM.getSource());
@@ -73,10 +86,38 @@ public class ImageFragment extends Fragment{
                 @Override
                 public void onError() {
                     pb.setVisibility(View.GONE);
-                    Picasso.with(inflater.getContext()).load("http://lorempixel.com/" + MainActivity.screenImage).skipMemoryCache().into(iv);
+                    Picasso.with(inflater.getContext()).load("http://lorempixel.com/" + MainActivity.screenImage + "/" + text).skipMemoryCache().into(iv);
                 }
             });
         }
         return v;
+    }
+
+    public void changeView(){
+        Display display = getActivity().getWindowManager().getDefaultDisplay();
+        Point point = new Point();
+        int mWidth = 0;
+        if(display != null) {
+            if (display != null) {
+                if (Build.VERSION.SDK_INT >= 13) {
+                    display.getSize(point);
+                    mWidth = point.y;
+                } else {
+                    mWidth = display.getWidth();
+                }
+            }
+        }
+        int mHeight = RelativeLayout.LayoutParams.MATCH_PARENT;
+        if(((MainActivity)getActivity()).getStateCrop() == 1){
+            mHeight = (int)(((mWidth * 9f) / 16f) / getResources().getDisplayMetrics().density);
+        }else if(((MainActivity)getActivity()).getStateCrop() == 0){
+            mHeight = (int)(((mWidth * 9f) / 16f));
+        }
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                mHeight);
+        lp.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        if(iv != null)
+        iv.setLayoutParams(lp);
     }
 }

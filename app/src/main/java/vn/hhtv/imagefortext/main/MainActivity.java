@@ -1,6 +1,5 @@
-package vn.hhtv.imagefortext;
+package vn.hhtv.imagefortext.main;
 
-import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
@@ -19,12 +18,12 @@ import android.os.Handler;
 import android.os.ResultReceiver;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -38,11 +37,10 @@ import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
-import android.view.animation.DecelerateInterpolator;
-import android.view.animation.RotateAnimation;
 import android.view.animation.ScaleAnimation;
 import android.view.animation.TranslateAnimation;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -50,7 +48,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
@@ -64,6 +61,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.loopj.android.http.RequestHandle;
 import com.loopj.android.http.TextHttpResponseHandler;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
@@ -76,11 +74,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import cz.msebera.android.httpclient.Header;
+import vn.hhtv.imagefortext.R;
+import vn.hhtv.imagefortext.animation.MoveAlphaAnimation;
 import vn.hhtv.imagefortext.animation.MoveBottomTopAnimation;
 import vn.hhtv.imagefortext.animation.MoveLeftRightAnimation;
 import vn.hhtv.imagefortext.animation.MovePositionAnimation;
 import vn.hhtv.imagefortext.api.RestClient;
-import vn.hhtv.imagefortext.config.ApiConfig;
 import vn.hhtv.imagefortext.config.Constants;
 import vn.hhtv.imagefortext.dialogs.SelectionFontDialog;
 import vn.hhtv.imagefortext.fragments.ImageFragment;
@@ -149,15 +148,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public static String screenResolution = "720x1280";
     public static String screenImage = "720/1280/";
     private ImagePageAdapter mPageAdapter;
+    private RequestHandle requestHandle;
 
-    private ImageView mGridBtn, mFbBtn, mInsBtn, mTwBtn, mSettingBtn;
+    private ImageView mGridBtn, mFbBtn, mInsBtn, mTwBtn, mSettingBtn, mLetStartIv;
     private LinearLayout mFbRl, mInsRl, mTwRl, mSettingRl;
     private TextView mAddressTv;
+    private LinearLayout mSearchLl;
+    private EditText mContentSearchEdt;
+    private int stateCrop = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        overridePendingTransition(R.anim.trans_left_in, R.anim.trans_left_out);
         density = getResources().getDisplayMetrics().density;
         distanceMove = density * 100;
         Display display = getWindowManager().getDefaultDisplay();
@@ -182,6 +186,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         mHandler = new Handler();
         mViewPager = (ViewPager) findViewById(R.id.viewPager);
+        LinearLayoutManager layoutManager
+                = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         mContentEdt = (AutoResizeEditText) findViewById(R.id.editText);
         mRootView = (RelativeLayout) findViewById(R.id.rootView);
         mHomeRL = (RelativeLayout) findViewById(R.id.homeRL);
@@ -194,23 +200,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mInsBtn = (ImageView) findViewById(R.id.inta);
         mTwBtn = (ImageView) findViewById(R.id.tw);
         mSettingBtn = (ImageView) findViewById(R.id.setting);
+        mLetStartIv = (ImageView) findViewById(R.id.letstart_iv);
+        mLetStartIv.startAnimation(new MoveAlphaAnimation(mLetStartIv, null));
         mFbRl = (LinearLayout) findViewById(R.id.fb_rl);
         mFbRl.setOnClickListener(this);
         mInsRl = (LinearLayout) findViewById(R.id.inta_rl);
         mInsRl.setOnClickListener(this);
         mTwRl = (LinearLayout) findViewById(R.id.tw_rl);
         mTwRl.setOnClickListener(this);
+        mSearchLl = (LinearLayout) findViewById(R.id.search_ll);
         mSettingRl = (LinearLayout) findViewById(R.id.setting_rl);
         mSettingRl.setOnClickListener(this);
         mRootView.setDrawingCacheEnabled(false);
+        mContentSearchEdt = (EditText) findViewById(R.id.editText_search);
         mContentEdt.addTextChangedListener(contentChange);
         mContentEdt.setOnTouchListener(new View.OnTouchListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
+            public boolean onTouch(View view, MotionEvent event) {
                 mViewPager.onTouchEvent(event);
+
+//                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
+//
+//                switch (event.getAction())
+//                {
+//                    case MotionEvent.ACTION_MOVE:
+//                        params.topMargin = (int) event.getRawY() - view.getHeight();
+//                        params.leftMargin = (int) event.getRawX() - (view.getWidth() / 2);
+//                        view.setLayoutParams(params);
+//                        break;
+//
+//                    case MotionEvent.ACTION_UP:
+//                        params.topMargin = (int) event.getRawY() - view.getHeight();
+//                        params.leftMargin = (int) event.getRawX() - (view.getWidth() / 2);
+//                        view.setLayoutParams(params);
+//                        break;
+//
+//                    case MotionEvent.ACTION_DOWN:
+//                        view.setLayoutParams(params);
+//                        break;
+//                }
+
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
                     return true;
                 }
+                if (mLetStartIv.getVisibility() == View.VISIBLE)
+                    mLetStartIv.setVisibility(View.GONE);
                 return false;
             }
         });
@@ -246,6 +280,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
         mContentEdt.setHeightLimit(500);
         mViewPager.setOffscreenPageLimit(4);
+        mViewPager.setClipToPadding(false);
+        mViewPager.setPageMargin(20);
+        mViewPager.setPadding(30, 0, 30, 0);
         mViewPager.setVisibility(View.GONE);
         mContentEdt.setSelected(false);
         if (Build.VERSION.SDK_INT > 10)
@@ -269,30 +306,75 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mPageAdapter = new ImagePageAdapter(getSupportFragmentManager());
         mViewPager.setAdapter(mPageAdapter);
         mResultReceiver = new AddressResultReceiver(new Handler());
-        Picasso.with(this).load("http://lorempixel.com/" + height + "/" +width +"/").into(new Target() {
-            @Override
-            public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
-                if (Build.VERSION.SDK_INT >= 16)
-                    mHomeRL.setBackground(new BitmapDrawable(bitmap));
-                else
-                    mHomeRL.setBackgroundDrawable(new BitmapDrawable(bitmap));
-            }
-
-            @Override
-            public void onBitmapFailed(Drawable errorDrawable) {
-
-            }
-
-            @Override
-            public void onPrepareLoad(Drawable placeHolderDrawable) {
-
-            }
-        });
+//        Picasso.with(this).load("http://lorempixel.com/" + height + "/" +width +"/").into(new Target() {
+//            @Override
+//            public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+//                if (Build.VERSION.SDK_INT >= 16)
+//                    mHomeRL.setBackground(new BitmapDrawable(bitmap));
+//                else
+//                    mHomeRL.setBackgroundDrawable(new BitmapDrawable(bitmap));
+//            }
+//
+//            @Override
+//            public void onBitmapFailed(Drawable errorDrawable) {
+//
+//            }
+//
+//            @Override
+//            public void onPrepareLoad(Drawable placeHolderDrawable) {
+//
+//            }
+//        });
         // Set defaults, then update using values stored in the Bundle.
         mAddressRequested = false;
         updateValuesFromBundle(savedInstanceState);
 
         buildGoogleApiClient();
+        findViewById(R.id.crop_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stateCrop += 1;
+                if (stateCrop == 3) stateCrop = 0;
+                if (stateCrop == 2) {
+                    mViewPager.setPadding(30 * 2, 30, 30 * 2, 30);
+                } else {
+                    mViewPager.setPadding(30, 0, 30, 0);
+                }
+                if (mPageAdapter != null)
+                    mPageAdapter.notifyDataSetChanged();
+            }
+        });
+
+        findViewById(R.id.search_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mSearchLl.getVisibility() == View.VISIBLE){
+                    mSearchLl.setVisibility(View.GONE);
+                }else {
+                    mSearchLl.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+        findViewById(R.id.search_content_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                KeyboardUtil.hideSoftKeyboard(MainActivity.this);
+                String text = mContentSearchEdt.getText().toString().trim();
+                if(!TextUtils.isEmpty(text)){
+                    images = null;
+                    mPageAdapter.notifyDataSetChanged();
+                    mViewPager.setAdapter(mPageAdapter);
+                    mViewPager.setVisibility(View.GONE);
+                    if(requestHandle != null) requestHandle.cancel(true);
+                    requestHandle = RestClient.search(text, responseHandler);
+                }
+            }
+        });
+    }
+
+    public int getStateCrop(){
+        return stateCrop;
     }
 
     private void capture(int id) {
@@ -412,28 +494,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mPageAdapter.notifyDataSetChanged();
         mViewPager.setAdapter(mPageAdapter);
         mViewPager.setVisibility(View.GONE);
-        RestClient.search(mContent, new TextHttpResponseHandler() {
-            @Override
-            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-
-            }
-
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, String responseString) {
-                try {
-                    Type type = new TypeToken<List<Image>>() {
-                    }.getType();
-                    images = new GsonBuilder().create().fromJson(responseString, type);
-                } catch (Exception e) {
-                    images = new ArrayList<Image>();
-                }
-                mPageAdapter.notifyDataSetChanged();
-//                mPageAdapter = new ImagePageAdapter(getSupportFragmentManager());
-                mViewPager.setAdapter(mPageAdapter);
-                mViewPager.setVisibility(View.VISIBLE);
-            }
-        });
+        if(requestHandle != null) requestHandle.cancel(true);
+        requestHandle = RestClient.search(mContent, responseHandler);
     }
+
+    TextHttpResponseHandler responseHandler = new TextHttpResponseHandler() {
+        @Override
+        public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+
+        }
+
+        @Override
+        public void onSuccess(int statusCode, Header[] headers, String responseString) {
+            try {
+                Type type = new TypeToken<List<Image>>() {
+                }.getType();
+                images = new GsonBuilder().create().fromJson(responseString, type);
+            } catch (Exception e) {
+                images = new ArrayList<Image>();
+            }
+            mPageAdapter.notifyDataSetChanged();
+//                mPageAdapter = new ImagePageAdapter(getSupportFragmentManager());
+            mViewPager.setAdapter(mPageAdapter);
+            mViewPager.setVisibility(View.VISIBLE);
+        }
+    };
 
     private void installApp(String packageName) {
         mContentEdt.setCursorVisible(true);
@@ -740,10 +825,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return images.size();
         }
 
+        @Override
+        public int getItemPosition(Object object) {
+            return POSITION_NONE;
+        }
 
         @Override
         public Fragment getItem(int position) {
-            return ImageFragment.getInstance(position, images.get(position));
+            String text = mContentEdt != null ? mContentEdt.getText().toString() : "nature";
+            return ImageFragment.getInstance(position, images.get(position), text == null ? "nature" : text);
         }
     }
 
@@ -773,5 +863,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // Reset. Enable the Fetch Address button and stop showing the progress bar.
             mAddressRequested = false;
         }
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
     }
 }

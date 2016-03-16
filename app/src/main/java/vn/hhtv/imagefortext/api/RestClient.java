@@ -1,13 +1,13 @@
 package vn.hhtv.imagefortext.api;
 
 import android.content.Context;
-import android.text.TextUtils;
 
 import com.loopj.android.http.FileAsyncHttpResponseHandler;
+import com.loopj.android.http.RequestHandle;
 import com.loopj.android.http.RequestParams;
 import com.loopj.android.http.TextHttpResponseHandler;
 
-import vn.hhtv.imagefortext.MainActivity;
+import vn.hhtv.imagefortext.main.MainActivity;
 import vn.hhtv.imagefortext.config.ApiConfig;
 
 public class RestClient {
@@ -29,10 +29,10 @@ public class RestClient {
         LoopjRestClient.download(url, responseHandler);
     }
 
-    public static void search(String text, TextHttpResponseHandler responseHandler){
+    public static RequestHandle search(String text, TextHttpResponseHandler responseHandler){
         RequestParams params = new RequestParams();
         params.add(ApiConfig.KEY_TEXT, text);
         params.add(ApiConfig.KEY_SIZE, MainActivity.screenResolution);
-        LoopjRestClient.get(ApiConfig.SEARCH_URL, params, responseHandler);
+        return LoopjRestClient.getWithHandle(ApiConfig.SEARCH_URL, params, responseHandler);
     }
 }
