@@ -1,38 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:indeterminate="true"/>
+        android:indeterminate="true" />
 
     <ImageView
         android:id="@+id/imageView"
-        android:scaleType="centerCrop"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_centerInParent="true"
         android:adjustViewBounds="true"
-        />
+        android:scaleType="centerCrop" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#70000000"
-        android:visibility="visible" />
-
-    <ImageView
-        android:id="@+id/fullscreen_btn"
+    <FrameLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/imageView"
-        android:layout_alignParentRight="true"
-        android:layout_marginTop="-50dp"
-        android:layout_centerVertical="true"
-        android:padding="20dp"
-        android:src="@drawable/ic_fullscreen"/>
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/fullscreen_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/imageView"
+            android:layout_centerVertical="true"
+            android:layout_marginTop="-50dp"
+            android:padding="20dp"
+            android:src="@drawable/ic_fullscreen" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#70000000"
+            android:visibility="gone" />
+    </FrameLayout>
 </RelativeLayout>

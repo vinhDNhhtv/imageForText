@@ -1,6 +1,8 @@
 package vn.hhtv.imagefortext.main;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
 import android.graphics.Point;
@@ -16,9 +18,11 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.ResultReceiver;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -85,6 +89,7 @@ import vn.hhtv.imagefortext.dialogs.SelectionFontDialog;
 import vn.hhtv.imagefortext.fragments.ImageFragment;
 import vn.hhtv.imagefortext.models.Image;
 import vn.hhtv.imagefortext.service.FetchAddressIntentService;
+import vn.hhtv.imagefortext.utils.ImageUtil;
 import vn.hhtv.imagefortext.utils.KeyboardUtil;
 import vn.hhtv.imagefortext.utils.ToastUtil;
 import vn.hhtv.imagefortext.widget.AutoResizeEditText;
@@ -166,6 +171,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         distanceMove = density * 100;
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
+        getPermistion();
         int width = 0;
         int height = 0;
         try {
@@ -356,6 +362,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
+        findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ChooseImageDialog dialog = new ChooseImageDialog();
+                dialog.setListImage(ImageUtil.getAllShownImagesPath(MainActivity.this));
+                dialog.show(getSupportFragmentManager(), "Choose Image");
+            }
+        });
+
         findViewById(R.id.search_content_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -376,6 +391,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public int getStateCrop(){
         return stateCrop;
     }
+
+
 
     private void capture(int id) {
         mContentEdt.setCursorVisible(false);
@@ -835,6 +852,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             String text = mContentEdt != null ? mContentEdt.getText().toString() : "nature";
             return ImageFragment.getInstance(position, images.get(position), text == null ? "nature" : text);
         }
+        
     }
 
     /**
@@ -869,4 +887,54 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void finish() {
         super.finish();
     }
+
+    private void getPermistion(){
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
+
+                // Show an expanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+            } else {
+
+                // No explanation needed, we can request the permission.
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        12);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        }
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+
+                // Show an expanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+            } else {
+
+                // No explanation needed, we can request the permission.
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        11);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        }
+    }
+
 }

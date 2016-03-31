@@ -1,5 +1,6 @@
 package vn.hhtv.imagefortext.main;
 
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,10 +20,11 @@ import vn.hhtv.imagefortext.models.Image;
  */
 public class ThumbImageAdapter extends RecyclerView.Adapter<ThumbImageAdapter.ThumbViewHolder>{
 
-    private List<Image> images;
+//    private List<Image> images;
+    private List<String> imagesLocal;
 
-    public ThumbImageAdapter(List<Image> data){
-        this.images = data;
+    public ThumbImageAdapter(List<String> data){
+        this.imagesLocal = data;
     }
 
     @Override
@@ -33,12 +35,12 @@ public class ThumbImageAdapter extends RecyclerView.Adapter<ThumbImageAdapter.Th
 
     @Override
     public void onBindViewHolder(ThumbViewHolder holder, int position) {
-        Image image = images.get(position);
+        String image = imagesLocal.get(position);
         if(image == null) return;
         RequestCreator qc = null;
         holder.imageView.setImageResource(0);
-        if(image.getSource() != null) {
-            qc = Picasso.with(holder.imageView.getContext()).load(image.getSource()).resize(100, 100);
+        if(image != null) {
+            qc = Picasso.with(holder.imageView.getContext()).load(Uri.parse("file://" + image)).centerInside();
         }
         if(qc != null){
             qc.into(holder.imageView);
@@ -47,8 +49,8 @@ public class ThumbImageAdapter extends RecyclerView.Adapter<ThumbImageAdapter.Th
 
     @Override
     public int getItemCount() {
-        if(images == null) return 0;
-        return images.size();
+        if(imagesLocal == null) return 0;
+        return imagesLocal.size();
     }
 
     class ThumbViewHolder extends RecyclerView.ViewHolder{

@@ -60,11 +60,11 @@
                     android:layout_height="match_parent"
                     android:layout_centerInParent="true"
                     android:layout_gravity="center"
-                    android:layout_weight="1.2">
+                    android:layout_weight="1.4">
 
                     <vn.hhtv.imagefortext.widget.AutoResizeEditText
                         android:id="@+id/editText"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:focusable="true"
@@ -75,8 +75,10 @@
                         android:isScrollContainer="false"
                         android:maxLength="240"
                         android:textColor="#fff"
+                        android:padding="5dp"
+                        android:background="#90000000"
                         android:textColorHint="#dfffff"
-                        android:textSize="50sp" />
+                        android:textSize="40sp" />
 
                 </FrameLayout>
 
@@ -210,6 +212,7 @@
             android:id="@+id/search_ll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:orientation="horizontal">
 
             <EditText
