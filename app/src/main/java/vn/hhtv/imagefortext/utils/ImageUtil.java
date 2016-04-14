@@ -30,8 +30,7 @@ public class ImageUtil {
                 .getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
         while (cursor.moveToNext()) {
             absolutePathOfImage = cursor.getString(column_index_data);
-
-            listOfAllImages.add(absolutePathOfImage);
+            listOfAllImages.add(0,absolutePathOfImage);
         }
         return listOfAllImages;
     }

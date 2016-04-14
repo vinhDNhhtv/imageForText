@@ -12,6 +12,7 @@ public class Image {
     private int width;
     @SerializedName("height")
     private int height;
+    private boolean isOffline;
 
     public String getSource() {
         return source;
@@ -35,5 +36,13 @@ public class Image {
 
     public void setHeight(int height) {
         this.height = height;
+    }
+
+    public boolean isOffline() {
+        return isOffline;
+    }
+
+    public void setIsOffline(boolean isOffline) {
+        this.isOffline = isOffline;
     }
 }

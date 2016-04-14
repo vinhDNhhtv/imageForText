@@ -192,8 +192,14 @@ public class AutoResizeEditText extends EditText {
         reAdjust();
     }
 
-    private void reAdjust() {
-        adjustTextSize();
+    public void reAdjust() {
+        postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                adjustTextSize();
+            }
+        }, 100);
+
     }
 
     public void setHeightLimit(int height){

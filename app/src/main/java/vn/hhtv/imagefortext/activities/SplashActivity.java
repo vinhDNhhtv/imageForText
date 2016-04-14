@@ -14,16 +14,11 @@ import vn.hhtv.imagefortext.main.MainActivity;
 
 public class SplashActivity extends BaseActivity {
 
-    ImageView ivRotate, ivArrow;
-    RelativeLayout rootRl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
-        ivRotate = (ImageView) findViewById(R.id.imageRotate);
-        ivArrow = (ImageView) findViewById(R.id.ic_arrow);
-        rootRl = (RelativeLayout) findViewById(R.id.rootRl);
 //        ThreadCheckRotate tcR = new ThreadCheckRotate(this, rootRl, ivRotate, ivArrow, true);
 //        tcR.run();
         new Handler().postDelayed(new Runnable() {

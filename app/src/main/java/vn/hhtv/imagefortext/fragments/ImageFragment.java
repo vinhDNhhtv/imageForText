@@ -1,8 +1,11 @@
 package vn.hhtv.imagefortext.fragments;
 
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -73,8 +76,12 @@ public class ImageFragment extends Fragment{
         changeView();
         RequestCreator qc = null;
         if(imageM != null) {
-            qc = Picasso.with(container.getContext()).load(imageM.getSource());
-        }else
+            if(imageM.isOffline()){
+                qc = Picasso.with(container.getContext()).load(Uri.parse(imageM.getSource()));
+            }else {
+                qc = Picasso.with(container.getContext()).load(imageM.getSource());
+            }
+        }else if(image != null)
         qc = Picasso.with(container.getContext()).load(image);
         if(qc != null){
             qc.into(iv, new Callback() {
@@ -91,6 +98,47 @@ public class ImageFragment extends Fragment{
             });
         }
         return v;
+    }
+
+    public Bitmap getBitmap(){
+        Bitmap bitmap = null;
+        if(iv != null && iv.getDrawable() != null)
+            bitmap = ((BitmapDrawable)iv.getDrawable()).getBitmap();
+        if(bitmap != null){
+            if(((MainActivity)getActivity()).getStateCrop() == 0) {
+                if (bitmap.getWidth() >= bitmap.getHeight()) {
+
+                    return Bitmap.createBitmap(
+                            bitmap,
+                            bitmap.getWidth() / 2 - bitmap.getHeight() / 2,
+                            0,
+                            bitmap.getHeight(),
+                            bitmap.getHeight()
+                    );
+                } else {
+
+                    return Bitmap.createBitmap(
+                            bitmap,
+                            0,
+                            bitmap.getHeight() / 2 - bitmap.getWidth() / 2,
+                            bitmap.getWidth(),
+                            bitmap.getWidth()
+                    );
+                }
+            }
+            else if(((MainActivity)getActivity()).getStateCrop() == 2){
+                return bitmap;
+            }else {
+                return Bitmap.createBitmap(
+                        bitmap,
+                        0,
+                        bitmap.getHeight() / 2 - bitmap.getWidth() * 9 / 32,
+                        bitmap.getWidth(),
+                        bitmap.getWidth() * 9 / 16
+                );
+            }
+        }
+        return bitmap;
     }
 
     public void changeView(){

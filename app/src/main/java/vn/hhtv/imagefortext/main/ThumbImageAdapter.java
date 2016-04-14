@@ -22,9 +22,14 @@ public class ThumbImageAdapter extends RecyclerView.Adapter<ThumbImageAdapter.Th
 
 //    private List<Image> images;
     private List<String> imagesLocal;
+    private View.OnClickListener onClickListener;
 
     public ThumbImageAdapter(List<String> data){
         this.imagesLocal = data;
+    }
+    public ThumbImageAdapter(List<String> data, View.OnClickListener listener){
+        this.imagesLocal = data;
+        this.onClickListener = listener;
     }
 
     @Override
@@ -35,16 +40,28 @@ public class ThumbImageAdapter extends RecyclerView.Adapter<ThumbImageAdapter.Th
 
     @Override
     public void onBindViewHolder(ThumbViewHolder holder, int position) {
-        String image = imagesLocal.get(position);
+        final String image = imagesLocal.get(position);
         if(image == null) return;
         RequestCreator qc = null;
         holder.imageView.setImageResource(0);
         if(image != null) {
-            qc = Picasso.with(holder.imageView.getContext()).load(Uri.parse("file://" + image)).centerInside();
+            qc = Picasso.with(holder.imageView.getContext()).load(Uri.parse("file://" + image)).resize(100, 100);
         }
         if(qc != null){
+            qc.centerInside();
             qc.into(holder.imageView);
         }
+        holder.imageView.setTag("file://" + image);
+        if(onClickListener != null)
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.setTag("file://" + image);
+                if(onClickListener != null){
+                    onClickListener.onClick(v);
+                }
+            }
+        });
     }
 
     @Override

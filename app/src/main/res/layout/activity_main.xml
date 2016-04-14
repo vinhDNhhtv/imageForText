@@ -57,16 +57,17 @@
                 <FrameLayout
                     android:id="@+id/container"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="400dp"
                     android:layout_centerInParent="true"
                     android:layout_gravity="center"
                     android:layout_weight="1.4">
 
                     <vn.hhtv.imagefortext.widget.AutoResizeEditText
                         android:id="@+id/editText"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
+                        android:background="#90000000"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
                         android:gravity="center_vertical|center_horizontal"
@@ -74,9 +75,8 @@
                         android:inputType="textMultiLine|textNoSuggestions"
                         android:isScrollContainer="false"
                         android:maxLength="240"
-                        android:textColor="#fff"
                         android:padding="5dp"
-                        android:background="#90000000"
+                        android:textColor="#fff"
                         android:textColorHint="#dfffff"
                         android:textSize="40sp" />
 
@@ -114,82 +114,6 @@
         android:layout_height="match_parent"
         android:visibility="visible">
 
-        <LinearLayout
-            android:id="@+id/fb_rl"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:layout_gravity="bottom|right"
-            android:layout_margin="30dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/fb"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentRight="true"
-                android:src="@drawable/ic_fb" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/inta_rl"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:layout_gravity="bottom|right"
-            android:layout_margin="30dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/inta"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentRight="true"
-                android:src="@drawable/ic_ins" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/tw_rl"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:layout_gravity="bottom|right"
-            android:layout_margin="30dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/tw"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentRight="true"
-                android:src="@drawable/ic_tw" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/setting_rl"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:layout_gravity="bottom|right"
-            android:layout_margin="30dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/setting"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentRight="true"
-                android:src="@drawable/ic_setting" />
-        </LinearLayout>
-
         <ImageView
             android:id="@+id/letstart_iv"
             android:layout_width="wrap_content"
@@ -212,8 +136,8 @@
             android:id="@+id/search_ll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <EditText
                 android:id="@+id/editText_search"
@@ -221,11 +145,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="30dp"
                 android:layout_marginRight="10dp"
-                android:maxLines="2"
                 android:layout_weight="1"
                 android:background="@drawable/underline_white"
                 android:gravity="center"
                 android:hint="Type the key"
+                android:maxLines="2"
                 android:textColor="#86b1da"
                 android:textColorHint="#86b1da" />
 
@@ -237,6 +161,55 @@
                 android:padding="10dp"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_fly" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/share_ll"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/tw_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:src="@drawable/ic_tw" />
+
+            <ImageView
+                android:id="@+id/fb_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:src="@drawable/ic_fb" />
+
+            <ImageView
+                android:id="@+id/gplus_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:src="@drawable/ic_gplus" />
+
+            <ImageView
+                android:id="@+id/inst_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:src="@drawable/ic_intas" />
+
+            <ImageView
+                android:id="@+id/more_share_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:src="@drawable/ic_more_plus" />
+
         </LinearLayout>
 
         <LinearLayout

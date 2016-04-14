@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -18,9 +20,11 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.ResultReceiver;
+import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
@@ -32,12 +36,15 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.ActionMode;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
@@ -73,8 +80,11 @@ import com.twitter.sdk.android.tweetcomposer.TweetComposer;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Type;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import cz.msebera.android.httpclient.Header;
@@ -93,6 +103,7 @@ import vn.hhtv.imagefortext.utils.ImageUtil;
 import vn.hhtv.imagefortext.utils.KeyboardUtil;
 import vn.hhtv.imagefortext.utils.ToastUtil;
 import vn.hhtv.imagefortext.widget.AutoResizeEditText;
+import vn.hhtv.imagefortext.widget.DrawImageView;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
@@ -136,6 +147,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ViewPager mViewPager;
     private Handler mHandler;
     private RelativeLayout mRootView, mHomeRL;
+    private FrameLayout mContainer;
+    private LinearLayout.LayoutParams mCLayoutParams;
+    private LinearLayout mShareLl;
     private String mContent = "";
     private Bitmap bitmap;
     public static int timeMove = 200;
@@ -155,12 +169,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ImagePageAdapter mPageAdapter;
     private RequestHandle requestHandle;
 
-    private ImageView mGridBtn, mFbBtn, mInsBtn, mTwBtn, mSettingBtn, mLetStartIv;
+    private ImageView mGridBtn, mLetStartIv;
     private LinearLayout mFbRl, mInsRl, mTwRl, mSettingRl;
     private TextView mAddressTv;
     private LinearLayout mSearchLl;
     private EditText mContentSearchEdt;
     private int stateCrop = 0;
+    private int textTypeIndex = -1;
+    int width = 0;
+    int height = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -172,8 +189,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         getPermistion();
-        int width = 0;
-        int height = 0;
         try {
             if (Build.VERSION.SDK_INT >= 13) {
                 display.getSize(size);
@@ -184,8 +199,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             width = display.getWidth();
             height = display.getHeight();
         }
-        if(width <= 0) width = 720;
-        if(height <= 0) height = 1280;
+        if (width <= 0) width = 720;
+        if (height <= 0) height = 1280;
         if (width > 0 && height > 0) {
             screenResolution = width + "x" + height;
             screenImage = width + "/" + height + "/";
@@ -197,26 +212,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mContentEdt = (AutoResizeEditText) findViewById(R.id.editText);
         mRootView = (RelativeLayout) findViewById(R.id.rootView);
         mHomeRL = (RelativeLayout) findViewById(R.id.homeRL);
+        mContainer = (FrameLayout) findViewById(R.id.container);
+        mCLayoutParams = (LinearLayout.LayoutParams)mContainer.getLayoutParams();
         mAddressTv = (TextView) findViewById(R.id.addressTv);
         mGridBtn = (ImageView) findViewById(R.id.grid);
         mGridBtn.setOnClickListener(this);
         ProgressBar pb = (ProgressBar) findViewById(R.id.progressBar);
         pb.getIndeterminateDrawable().setColorFilter(getResources().getColor(R.color.colorPrimary), android.graphics.PorterDuff.Mode.MULTIPLY);
-        mFbBtn = (ImageView) findViewById(R.id.fb);
-        mInsBtn = (ImageView) findViewById(R.id.inta);
-        mTwBtn = (ImageView) findViewById(R.id.tw);
-        mSettingBtn = (ImageView) findViewById(R.id.setting);
         mLetStartIv = (ImageView) findViewById(R.id.letstart_iv);
         mLetStartIv.startAnimation(new MoveAlphaAnimation(mLetStartIv, null));
-        mFbRl = (LinearLayout) findViewById(R.id.fb_rl);
-        mFbRl.setOnClickListener(this);
-        mInsRl = (LinearLayout) findViewById(R.id.inta_rl);
-        mInsRl.setOnClickListener(this);
-        mTwRl = (LinearLayout) findViewById(R.id.tw_rl);
-        mTwRl.setOnClickListener(this);
         mSearchLl = (LinearLayout) findViewById(R.id.search_ll);
-        mSettingRl = (LinearLayout) findViewById(R.id.setting_rl);
-        mSettingRl.setOnClickListener(this);
+        mShareLl = (LinearLayout) findViewById(R.id.share_ll);
         mRootView.setDrawingCacheEnabled(false);
         mContentSearchEdt = (EditText) findViewById(R.id.editText_search);
         mContentEdt.addTextChangedListener(contentChange);
@@ -264,6 +270,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return false;
             }
         });
+//        mViewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+//            @Override
+//            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+//
+//            }
+//
+//            @Override
+//            public void onPageSelected(int position) {
+//                FragmentManager fm = getSupportFragmentManager();
+//                Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.viewPager + ":" + position);
+//                if (page instanceof ImageFragment) {
+//                }
+//            }
+//
+//            @Override
+//            public void onPageScrollStateChanged(int state) {
+//
+//            }
+//        });
         mRootView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -284,13 +309,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return false;
             }
         });
-        mContentEdt.setHeightLimit(500);
         mViewPager.setOffscreenPageLimit(4);
         mViewPager.setClipToPadding(false);
         mViewPager.setPageMargin(20);
         mViewPager.setPadding(30, 0, 30, 0);
         mViewPager.setVisibility(View.GONE);
         mContentEdt.setSelected(false);
+        mContentEdt.setHeightLimit(height / 4);
         if (Build.VERSION.SDK_INT > 10)
             mContentEdt.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
 
@@ -311,6 +336,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             });
         mPageAdapter = new ImagePageAdapter(getSupportFragmentManager());
         mViewPager.setAdapter(mPageAdapter);
+        mViewPager.setOnPageChangeListener(mPageAdapter);
         mResultReceiver = new AddressResultReceiver(new Handler());
 //        Picasso.with(this).load("http://lorempixel.com/" + height + "/" +width +"/").into(new Target() {
 //            @Override
@@ -336,6 +362,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         updateValuesFromBundle(savedInstanceState);
 
         buildGoogleApiClient();
+        mCLayoutParams.height = (int) (width * density * 9 / 10);
+        mContainer.setLayoutParams(mCLayoutParams);
         findViewById(R.id.crop_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -343,58 +371,258 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (stateCrop == 3) stateCrop = 0;
                 if (stateCrop == 2) {
                     mViewPager.setPadding(30 * 2, 30, 30 * 2, 30);
+                    mCLayoutParams.height = (int) (mViewPager.getHeight() * density * 9 / 10);
+                    mContainer.setLayoutParams(mCLayoutParams);
+                    mContentEdt.setHeightLimit(height / 4);
                 } else {
                     mViewPager.setPadding(30, 0, 30, 0);
+                    if(stateCrop == 1){
+                        mCLayoutParams.height = (int) (width * density * 8 / 16);
+                        mContainer.setLayoutParams(mCLayoutParams);
+                        mContentEdt.setHeightLimit(width * 9 * 3 / 16 / 4);
+                    }else {
+                        mCLayoutParams.height = (int) (width * density * 9 / 10);
+                        mContainer.setLayoutParams(mCLayoutParams);
+                        mContentEdt.setHeightLimit(height / 4);
+                    }
                 }
+                mContentEdt.reAdjust();
                 if (mPageAdapter != null)
                     mPageAdapter.notifyDataSetChanged();
+                recreateSizeDrawView();
             }
         });
 
         findViewById(R.id.search_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mSearchLl.getVisibility() == View.VISIBLE){
+                if (mSearchLl.getVisibility() == View.VISIBLE) {
                     mSearchLl.setVisibility(View.GONE);
-                }else {
+                } else {
                     mSearchLl.setVisibility(View.VISIBLE);
                 }
+            }
+        });
+
+        findViewById(R.id.share_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mShareLl.getVisibility() == View.VISIBLE) {
+                    mShareLl.setVisibility(View.GONE);
+                } else {
+                    mShareLl.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+        findViewById(R.id.fb_btn).setOnClickListener(this);
+        findViewById(R.id.tw_btn).setOnClickListener(this);
+        findViewById(R.id.gplus_btn).setOnClickListener(this);
+        findViewById(R.id.inst_btn).setOnClickListener(this);
+        findViewById(R.id.more_share_btn).setOnClickListener(this);
+        findViewById(R.id.character_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                SelectionFontDialog dialog = SelectionFontDialog.newInstance(new SelectionFontDialog.SelectedFontListener() {
+//                    @Override
+//                    public void onSelected(int p, String font) {
+//                        Typeface type = Typeface.createFromAsset(MainActivity.this.getAssets(), "fonts/" + font);
+//                        mContentEdt.setTypeface(type);
+//                        Paint paint = new Paint();
+//                        paint.setTypeface(type); // if custom font use `TypeFace.createFromFile`
+//                        paint.setTextSize(mContentEdt.getTextSize());
+//                        Rect bounds = new Rect();
+//                        paint.getTextBounds("What do you thing?", 0, "What do you thing?".length(), bounds);
+//                        Log.d("Text Height", bounds.height() + "");
+//                    }
+//                });
+//                dialog.show(getSupportFragmentManager(), "SelectionFont");
+                int length = getResources().getStringArray(R.array.list_font).length;
+                textTypeIndex++;
+                if (textTypeIndex >= length) textTypeIndex = 0;
+                String font = getResources().getStringArray(R.array.list_font)[textTypeIndex];
+                Typeface type = Typeface.createFromAsset(MainActivity.this.getAssets(), "fonts/" + font);
+                mContentEdt.setTypeface(type);
+//                mContentEdt.setLineSpacing(0, 1);
+                Paint paint = new Paint();
+                paint.setTypeface(type); // if custom font use `TypeFace.createFromFile`
+                paint.setTextSize(mContentEdt.getTextSize());
+                Rect bounds = new Rect();
+                paint.getTextBounds(mContentEdt.getText().toString(), 0, mContentEdt.getText().toString().length(), bounds);
+//                mContentEdt.setHeight(mContentEdt.getLineHeight());
+//                mContentEdt.setGravity(Gravity.BOTTOM);
+                Log.d("Text Height", bounds.height() + "  " + mContentEdt.getLineHeight() + "  " + mContentEdt.getHeight() + "  " +  font);
+                mContentEdt.reAdjust();
+
             }
         });
 
         findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ChooseImageDialog dialog = new ChooseImageDialog();
+                final ChooseImageDialog dialog = new ChooseImageDialog();
+                dialog.setClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (v.getId() == R.id.take_photo_btn) {
+                            dialog.dismiss();
+                            dispatchTakePictureIntent();
+                        } else {
+                            String image = (String) v.getTag();
+                            if (image != null) {
+//                                dialog.dismiss();
+//                                Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.viewPager + ":" + mViewPager.getCurrentItem());
+//                                if (page instanceof ImageFragment) {
+//
+//                                }
+                                if (images == null) {
+                                    images = new ArrayList<Image>();
+                                }
+                                images.add(0, new Image());
+                                images.get(0).setSource(image);
+                                images.get(0).setIsOffline(true);
+                                mPageAdapter.notifyDataSetChanged();
+                                mViewPager.setVisibility(View.VISIBLE);
+                                mViewPager.setCurrentItem(0);
+                                dialog.dismiss();
+                            }
+                        }
+                    }
+                });
                 dialog.setListImage(ImageUtil.getAllShownImagesPath(MainActivity.this));
                 dialog.show(getSupportFragmentManager(), "Choose Image");
             }
         });
+
 
         findViewById(R.id.search_content_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 KeyboardUtil.hideSoftKeyboard(MainActivity.this);
                 String text = mContentSearchEdt.getText().toString().trim();
-                if(!TextUtils.isEmpty(text)){
+                if (!TextUtils.isEmpty(text)) {
                     images = null;
                     mPageAdapter.notifyDataSetChanged();
                     mViewPager.setAdapter(mPageAdapter);
                     mViewPager.setVisibility(View.GONE);
-                    if(requestHandle != null) requestHandle.cancel(true);
+                    if (requestHandle != null) requestHandle.cancel(true);
                     requestHandle = RestClient.search(text, responseHandler);
                 }
             }
         });
+        recreateSizeDrawView();
     }
 
-    public int getStateCrop(){
+    public int getStateCrop() {
         return stateCrop;
     }
 
+    private void recreateSizeDrawView() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Point size = new Point();
+        getPermistion();
+        int width = 0;
+        int height = 0;
+        try {
+            if (Build.VERSION.SDK_INT >= 13) {
+                display.getSize(size);
+                width = size.x;
+                height = size.y;
+            }
+        } catch (NoSuchMethodError e) {
+            width = display.getWidth();
+            height = display.getHeight();
+        }
+        if (width <= 0) width = 720;
+        if (height <= 0) height = 1280;
+        if (getStateCrop() == 1) {
+            height = (int) (((width * 9f) / 16f) / getResources().getDisplayMetrics().density);
+        } else if (getStateCrop() == 0) {
+            height = (int) (((width * 9f) / 16f));
+        }
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                height);
+        lp.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+    }
 
+    static final int REQUEST_TAKE_PHOTO = 1;
 
-    private void capture(int id) {
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+                        Uri.fromFile(photoFile));
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
+        }
+    }
+
+    String mCurrentPhotoPath;
+
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = "file:" + image.getAbsolutePath();
+        return image;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
+            Bundle extras = data.getExtras();
+            String url = data.getDataString();
+            if (url != null) {
+                galleryAddPic(url);
+                if (images == null) {
+                    images = new ArrayList<Image>();
+                }
+                images.add(0, new Image());
+                images.get(0).setSource(url);
+                images.get(0).setIsOffline(true);
+                mPageAdapter.notifyDataSetChanged();
+                mViewPager.setVisibility(View.VISIBLE);
+                mViewPager.setCurrentItem(0);
+            }
+//            mImageView.setImageBitmap(imageBitmap);
+        }
+    }
+
+    private void galleryAddPic(String path) {
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        File f = new File(path);
+        Uri contentUri = Uri.fromFile(f);
+        mediaScanIntent.setData(contentUri);
+        this.sendBroadcast(mediaScanIntent);
+    }
+
+    private void galleryAddPic(Uri path) {
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        mediaScanIntent.setData(path);
+        this.sendBroadcast(mediaScanIntent);
+    }
+
+    private void capture(final int id) {
         mContentEdt.setCursorVisible(false);
         try {
             if (bitmap != null) {
@@ -403,16 +631,58 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             Intent sharingIntent = new Intent(Intent.ACTION_SEND);
             mRootView.setDrawingCacheEnabled(true);
-            bitmap = mRootView.getDrawingCache(true).copy(
-                    Bitmap.Config.ARGB_8888, false);
-            if (id == R.id.fb_rl) {
-                Intent intent = getPackageManager().getLaunchIntentForPackage("com.facebook.katana");
-                if (intent != null) {
-                    shareFB(bitmap);
-                } else {
-                    installApp("com.facebook.katana");
+            Fragment fragment = mPageAdapter.getCurrentItem();
+            if (fragment != null && fragment instanceof ImageFragment) {
+//                return;
+                bitmap = ((ImageFragment) fragment).getBitmap();
+            }
+            if (bitmap == null)
+                bitmap = mRootView.getDrawingCache(true).copy(
+                        Bitmap.Config.ARGB_8888, false);
+            mContentEdt.setDrawingCacheEnabled(true);
+            Bitmap bitmapText = mContentEdt.getDrawingCache(true).copy(Bitmap.Config.ARGB_8888, false);
+            mContentEdt.setDrawingCacheEnabled(false);
+            if (bitmap == null || bitmapText == null) return;
+            Display display = getWindowManager().getDefaultDisplay();
+            Point size = new Point();
+            int bitmap1Width = bitmap.getWidth();
+            getPermistion();
+            int width = 0;
+            int height = 0;
+            try {
+                if (Build.VERSION.SDK_INT >= 13) {
+                    display.getSize(size);
+                    width = size.x;
+                    height = size.y;
                 }
-            } else if (id == R.id.tw_rl) {
+            } catch (NoSuchMethodError e) {
+                width = display.getWidth();
+                height = display.getHeight();
+            }
+            float scale_factor = (float) bitmap1Width / width;
+            Matrix matrix = new Matrix();
+            matrix.postScale(scale_factor, scale_factor);
+            Matrix matrixImage = new Matrix();
+            matrixImage.postScale(1 / scale_factor, 1 / scale_factor);
+            Bitmap cropBitmap = Bitmap.createBitmap(bitmapText, 0, 0, bitmapText.getWidth(), bitmapText.getHeight(), new Matrix(), false);
+            Bitmap cropBitmapImage = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrixImage, false);
+            bitmap1Width = cropBitmapImage.getWidth();
+            int bitmap1Height = cropBitmapImage.getHeight();
+            Bitmap overlayBitmap = Bitmap.createBitmap(bitmap1Width, bitmap1Height, cropBitmapImage.getConfig());
+            int bitmap2Width = cropBitmap.getWidth();
+            int bitmap2Height = cropBitmap.getHeight();
+            Canvas canvas = new Canvas(overlayBitmap);
+            canvas.drawBitmap(cropBitmapImage, new Matrix(), null);
+            canvas.drawBitmap(cropBitmap, bitmap1Width / 2 - bitmap2Width / 2, bitmap1Height / 2 - bitmap2Height / 2, null);
+
+            if (id == 0) {
+//                Intent intent = getPackageManager().getLaunchIntentForPackage("com.facebook.katana");
+//                if (intent != null) {
+                    shareFB(overlayBitmap, mContent);
+//                } else {
+//                    installApp("com.facebook.katana");
+//                }
+            } else if (id == 1) {
                 Intent intent = getPackageManager().getLaunchIntentForPackage("com.twitter.android");
                 if (intent == null) {
                     installApp("com.twitter.android");
@@ -422,15 +692,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 File f = new File(sdcard, "imft_tw" + System.currentTimeMillis() + " .jpg");
                 FileOutputStream out = null;
                 out = new FileOutputStream(f);
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                overlayBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
                 out.close();
                 mRootView.setDrawingCacheEnabled(false);
                 sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f));
                 shareTwitter(Uri.fromFile(f));
-            } else if (id == R.id.inta_rl) {
+                galleryAddPic(Uri.fromFile(f));
+            } else if (id == 2 || id == 3 || id == 4) {
                 Intent intent = getPackageManager().getLaunchIntentForPackage("com.instagram.android");
-                if (intent == null) {
+                if (intent == null && id == 2) {
                     installApp("com.instagram.android");
+                    return;
+                }
+                Intent intentg = getPackageManager().getLaunchIntentForPackage("com.google.android.apps.plus");
+                if (intentg == null && id == 4) {
+                    installApp("com.google.android.apps.plus");
                     return;
                 }
                 File sdcard = Environment.getExternalStorageDirectory();
@@ -438,7 +714,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 File f = new File(sdcard, filename);
                 FileOutputStream out = null;
                 out = new FileOutputStream(f);
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                overlayBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
                 out.close();
                 mRootView.setDrawingCacheEnabled(false);
                 MediaScannerConnection.scanFile(getApplicationContext(), new String[]{f.getAbsolutePath()}, null, new MediaScannerConnection.OnScanCompletedListener() {
@@ -448,9 +724,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Intent sharingIntent = new Intent(Intent.ACTION_SEND);
                         sharingIntent.putExtra(Intent.EXTRA_STREAM, uri); // imageUri
                         sharingIntent.setType("image/*");
-                        sharingIntent.setPackage("com.instagram.android");
+                        if (id == 2)
+                            sharingIntent.setPackage("com.instagram.android");
+                        if (id == 4)
+                            sharingIntent.setPackage("com.google.android.apps.plus");
                         sharingIntent.putExtra(Intent.EXTRA_TEXT, mContent);
                         startActivity(Intent.createChooser(sharingIntent, "Share Image"));
+                        galleryAddPic(uri);
                     }
                 });
 
@@ -461,9 +741,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mContentEdt.setCursorVisible(true);
     }
 
-    private void shareFB(Bitmap bitmap) {
+    private void shareFB(Bitmap bitmap, String caption) {
         SharePhoto photo = new SharePhoto.Builder()
                 .setBitmap(bitmap)
+                .setCaption(caption)
                 .build();
         SharePhotoContent content = new SharePhotoContent.Builder()
                 .addPhoto(photo)
@@ -511,7 +792,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mPageAdapter.notifyDataSetChanged();
         mViewPager.setAdapter(mPageAdapter);
         mViewPager.setVisibility(View.GONE);
-        if(requestHandle != null) requestHandle.cancel(true);
+        if (requestHandle != null) requestHandle.cancel(true);
         requestHandle = RestClient.search(mContent, responseHandler);
     }
 
@@ -577,14 +858,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mTwRl.startAnimation(new MovePositionAnimation(mTwRl, 3f, isExpand, null));
                 isExpand = !isExpand;
                 break;
-            case R.id.fb_rl:
-            case R.id.tw_rl:
-            case R.id.inta_rl:
+            case 0:
+            case 1:
+            case 2:
                 v.startAnimation(scaleClick());
                 onClick(mGridBtn);
                 capture(v.getId());
                 break;
-            case R.id.setting_rl:
+            case 3:
                 v.startAnimation(scaleClick());
                 onClick(mGridBtn);
                 SelectionFontDialog dialog = SelectionFontDialog.newInstance(new SelectionFontDialog.SelectedFontListener() {
@@ -601,6 +882,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 });
                 dialog.show(getSupportFragmentManager(), "SelectionFont");
+                break;
+
+            case R.id.fb_btn:
+                capture(0);
+                break;
+            case R.id.gplus_btn:
+                capture(4);
+                break;
+            case R.id.tw_btn:
+                capture(1);
+                break;
+            case R.id.inst_btn:
+                capture(2);
+                break;
+            case R.id.more_share_btn:
+                capture(3);
                 break;
 
         }
@@ -830,7 +1127,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-    private class ImagePageAdapter extends FragmentStatePagerAdapter {
+    private class ImagePageAdapter extends FragmentStatePagerAdapter implements ViewPager.OnPageChangeListener {
+
+        int currentPage = 0;
+
+        private SparseArray<Fragment> mPageReferenceMap = new SparseArray<Fragment>();
 
         public ImagePageAdapter(FragmentManager fm) {
             super(fm);
@@ -850,9 +1151,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public Fragment getItem(int position) {
             String text = mContentEdt != null ? mContentEdt.getText().toString() : "nature";
-            return ImageFragment.getInstance(position, images.get(position), text == null ? "nature" : text);
+            Fragment fragment = ImageFragment.getInstance(position, images.get(position), text == null ? "nature" : text);
+            mPageReferenceMap.put(position, fragment);
+            return fragment;
         }
-        
+
+        @Override
+        public void destroyItem(ViewGroup container, int position, Object object) {
+            super.destroyItem(container, position, object);
+            mPageReferenceMap.remove(Integer.valueOf(position));
+        }
+
+        public Fragment getCurrentItem() {
+            return mPageReferenceMap.get(currentPage);
+        }
+
+        @Override
+        public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+        }
+
+        @Override
+        public void onPageSelected(int position) {
+            currentPage = position;
+        }
+
+        @Override
+        public void onPageScrollStateChanged(int state) {
+
+        }
     }
 
     /**
@@ -888,7 +1215,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.finish();
     }
 
-    private void getPermistion(){
+    private void getPermistion() {
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
