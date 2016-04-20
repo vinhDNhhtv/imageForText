@@ -1,10 +1,15 @@
 package vn.hhtv.imagefortext.main;
 
 import android.Manifest;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
@@ -26,6 +31,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -35,6 +41,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.ActionMode;
@@ -78,6 +85,7 @@ import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 import com.twitter.sdk.android.tweetcomposer.TweetComposer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -149,6 +157,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private RelativeLayout mRootView, mHomeRL;
     private FrameLayout mContainer;
     private LinearLayout.LayoutParams mCLayoutParams;
+    private LinearLayout mTextAroundLl;
     private LinearLayout mShareLl;
     private String mContent = "";
     private Bitmap bitmap;
@@ -174,10 +183,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView mAddressTv;
     private LinearLayout mSearchLl;
     private EditText mContentSearchEdt;
-    private int stateCrop = 0;
+    private View leftEdt, rightEdt;
+    private int stateCrop = 0;   // 0 = Square, 1 = Horizontal rectangle, 2 = Vertical rectangle
     private int textTypeIndex = -1;
     int width = 0;
     int height = 0;
+    private boolean isUserChangeText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -213,7 +224,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mRootView = (RelativeLayout) findViewById(R.id.rootView);
         mHomeRL = (RelativeLayout) findViewById(R.id.homeRL);
         mContainer = (FrameLayout) findViewById(R.id.container);
-        mCLayoutParams = (LinearLayout.LayoutParams)mContainer.getLayoutParams();
+        mTextAroundLl = (LinearLayout) findViewById(R.id.textAround);
+        mCLayoutParams = (LinearLayout.LayoutParams) mContainer.getLayoutParams();
         mAddressTv = (TextView) findViewById(R.id.addressTv);
         mGridBtn = (ImageView) findViewById(R.id.grid);
         mGridBtn.setOnClickListener(this);
@@ -225,6 +237,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mShareLl = (LinearLayout) findViewById(R.id.share_ll);
         mRootView.setDrawingCacheEnabled(false);
         mContentSearchEdt = (EditText) findViewById(R.id.editText_search);
+        leftEdt = findViewById(R.id.left_edt);
+        rightEdt = findViewById(R.id.right_edt);
         mContentEdt.addTextChangedListener(contentChange);
         mContentEdt.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -267,6 +281,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (event.getAction() == MotionEvent.ACTION_UP) {
                     KeyboardUtil.hideSoftKeyboard(MainActivity.this);
                 }
+                if (mLetStartIv.getVisibility() == View.VISIBLE)
+                    mLetStartIv.setVisibility(View.GONE);
                 return false;
             }
         });
@@ -296,6 +312,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_DOWN) {
                     KeyboardUtil.hideSoftKeyboard(MainActivity.this);
                 }
+                if (mLetStartIv.getVisibility() == View.VISIBLE)
+                    mLetStartIv.setVisibility(View.GONE);
                 return false;
             }
         });
@@ -306,6 +324,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_DOWN) {
                     KeyboardUtil.hideSoftKeyboard(MainActivity.this);
                 }
+                if (mLetStartIv.getVisibility() == View.VISIBLE)
+                    mLetStartIv.setVisibility(View.GONE);
                 return false;
             }
         });
@@ -338,55 +358,41 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mViewPager.setAdapter(mPageAdapter);
         mViewPager.setOnPageChangeListener(mPageAdapter);
         mResultReceiver = new AddressResultReceiver(new Handler());
-//        Picasso.with(this).load("http://lorempixel.com/" + height + "/" +width +"/").into(new Target() {
-//            @Override
-//            public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
-//                if (Build.VERSION.SDK_INT >= 16)
-//                    mHomeRL.setBackground(new BitmapDrawable(bitmap));
-//                else
-//                    mHomeRL.setBackgroundDrawable(new BitmapDrawable(bitmap));
-//            }
-//
-//            @Override
-//            public void onBitmapFailed(Drawable errorDrawable) {
-//
-//            }
-//
-//            @Override
-//            public void onPrepareLoad(Drawable placeHolderDrawable) {
-//
-//            }
-//        });
-        // Set defaults, then update using values stored in the Bundle.
         mAddressRequested = false;
         updateValuesFromBundle(savedInstanceState);
 
         buildGoogleApiClient();
-        mCLayoutParams.height = (int) (width * density * 9 / 10);
-        mContainer.setLayoutParams(mCLayoutParams);
         findViewById(R.id.crop_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                ViewGroup.LayoutParams lflp = leftEdt.getLayoutParams();
+                ViewGroup.LayoutParams lrlp = rightEdt.getLayoutParams();
                 stateCrop += 1;
                 if (stateCrop == 3) stateCrop = 0;
                 if (stateCrop == 2) {
                     mViewPager.setPadding(30 * 2, 30, 30 * 2, 30);
-                    mCLayoutParams.height = (int) (mViewPager.getHeight() * density * 9 / 10);
-                    mContainer.setLayoutParams(mCLayoutParams);
+//                    mCLayoutParams.height = (int) (mViewPager.getHeight() * density * 9 / 10);
+//                    mContainer.setLayoutParams(mCLayoutParams);
                     mContentEdt.setHeightLimit(height / 4);
+                    lflp.width = (int)(20 * density);
+                    lrlp.width = (int)(20 * density);
                 } else {
                     mViewPager.setPadding(30, 0, 30, 0);
-                    if(stateCrop == 1){
-                        mCLayoutParams.height = (int) (width * density * 8 / 16);
-                        mContainer.setLayoutParams(mCLayoutParams);
+                    if (stateCrop == 1) {
+//                        mCLayoutParams.height = (int) (width * density * 8 / 16);
+//                        mContainer.setLayoutParams(mCLayoutParams);
                         mContentEdt.setHeightLimit(width * 9 * 3 / 16 / 4);
-                    }else {
-                        mCLayoutParams.height = (int) (width * density * 9 / 10);
-                        mContainer.setLayoutParams(mCLayoutParams);
+                    } else {
+//                        mCLayoutParams.height = (int) (width * density * 9 / 10);
+//                        mContainer.setLayoutParams(mCLayoutParams);
                         mContentEdt.setHeightLimit(height / 4);
                     }
+                    lflp.width = (int)(10 * density);
+                    lrlp.width = (int)(10 * density);
                 }
                 mContentEdt.reAdjust();
+                leftEdt.setLayoutParams(lflp);
+                rightEdt.setLayoutParams(lrlp);
                 if (mPageAdapter != null)
                     mPageAdapter.notifyDataSetChanged();
                 recreateSizeDrawView();
@@ -401,6 +407,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else {
                     mSearchLl.setVisibility(View.VISIBLE);
                 }
+            }
+        });
+
+        findViewById(R.id.edit_content_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mLetStartIv.getVisibility() == View.VISIBLE)
+                    mLetStartIv.setVisibility(View.GONE);
+                KeyboardUtil.hideSoftKeyboard(MainActivity.this);
+                String text = mContentSearchEdt.getText().toString().trim();
+                if (TextUtils.isEmpty(text)) return;
+                isUserChangeText = true;
+                mContentEdt.setText(text);
+                mContentEdt.reAdjust();
+                mContent = text;
             }
         });
 
@@ -423,20 +444,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.character_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                SelectionFontDialog dialog = SelectionFontDialog.newInstance(new SelectionFontDialog.SelectedFontListener() {
-//                    @Override
-//                    public void onSelected(int p, String font) {
-//                        Typeface type = Typeface.createFromAsset(MainActivity.this.getAssets(), "fonts/" + font);
-//                        mContentEdt.setTypeface(type);
-//                        Paint paint = new Paint();
-//                        paint.setTypeface(type); // if custom font use `TypeFace.createFromFile`
-//                        paint.setTextSize(mContentEdt.getTextSize());
-//                        Rect bounds = new Rect();
-//                        paint.getTextBounds("What do you thing?", 0, "What do you thing?".length(), bounds);
-//                        Log.d("Text Height", bounds.height() + "");
-//                    }
-//                });
-//                dialog.show(getSupportFragmentManager(), "SelectionFont");
                 int length = getResources().getStringArray(R.array.list_font).length;
                 textTypeIndex++;
                 if (textTypeIndex >= length) textTypeIndex = 0;
@@ -451,7 +458,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 paint.getTextBounds(mContentEdt.getText().toString(), 0, mContentEdt.getText().toString().length(), bounds);
 //                mContentEdt.setHeight(mContentEdt.getLineHeight());
 //                mContentEdt.setGravity(Gravity.BOTTOM);
-                Log.d("Text Height", bounds.height() + "  " + mContentEdt.getLineHeight() + "  " + mContentEdt.getHeight() + "  " +  font);
+                Log.d("Text Height", bounds.height() + "  " + mContentEdt.getLineHeight() + "  " + mContentEdt.getHeight() + "  " + font);
                 mContentEdt.reAdjust();
 
             }
@@ -470,13 +477,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } else {
                             String image = (String) v.getTag();
                             if (image != null) {
-//                                dialog.dismiss();
-//                                Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.viewPager + ":" + mViewPager.getCurrentItem());
-//                                if (page instanceof ImageFragment) {
-//
-//                                }
                                 if (images == null) {
-                                    images = new ArrayList<Image>();
+                                    images = new ArrayList<>();
                                 }
                                 images.add(0, new Image());
                                 images.get(0).setSource(image);
@@ -510,8 +512,123 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
         });
+        findViewById(R.id.more_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Fragment fragment = mPageAdapter.getCurrentItem();
+                if (fragment != null && fragment instanceof ImageFragment) {
+//                return;
+                    OptionLayoutDialog dialog = new OptionLayoutDialog();
+                    Image image = ((ImageFragment) fragment).getImageM();
+                    if (image == null || TextUtils.isEmpty(image.getSource())) return;
+                    String font = "";
+                    if (textTypeIndex >= 0)
+                        font = getResources().getStringArray(R.array.list_font)[textTypeIndex];
+                    dialog.setClickListener(optionLayoutListener);
+                    dialog.setData(image.getSource(), mContent, mContentEdt.getTextSize(), font, 0);
+                    dialog.show(getSupportFragmentManager(), "optionlayoutdialog");
+                }
+
+            }
+        });
         recreateSizeDrawView();
     }
+
+    private int mCurrentPosition = 4;
+    private View.OnClickListener optionLayoutListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            int position = (int) v.getTag();
+            FrameLayout.LayoutParams lapText = (FrameLayout.LayoutParams) mContentEdt.getLayoutParams();
+            mContentEdt.setBackgroundColor(Color.parseColor("#90000000"));
+            mCurrentPosition = position;
+            switch (position) {
+                case 0: // Top Left
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.TOP | Gravity.LEFT;
+                    mContentEdt.setGravity(Gravity.LEFT);
+                    break;
+                case 1: // Top center
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.CENTER_HORIZONTAL, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+                    mContentEdt.setGravity(Gravity.CENTER);
+                    break;
+                case 2: // Top right
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.TOP | Gravity.RIGHT;
+                    mContentEdt.setGravity(Gravity.RIGHT);
+                    break;
+                case 3: // Center left
+//                lapText.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.CENTER_VERTICAL | Gravity.LEFT;
+                    mContentEdt.setGravity(Gravity.LEFT);
+                    break;
+                case 4: // Center center
+//                lapText.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.CENTER;
+                    mContentEdt.setGravity(Gravity.CENTER);
+                    break;
+                case 5: // Center right
+//                lapText.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
+                    mContentEdt.setGravity(Gravity.RIGHT);
+                    break;
+                case 6: // Bottom Left
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.BOTTOM | Gravity.LEFT;
+                    mContentEdt.setGravity(Gravity.LEFT);
+                    break;
+                case 7: // Bottom center
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.CENTER_HORIZONTAL, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                    mContentEdt.setGravity(Gravity.CENTER);
+                    break;
+                case 8: // Bottom right
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+                    mContentEdt.setGravity(Gravity.RIGHT);
+                    break;
+                case 9: // Bottom Left
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.BOTTOM | Gravity.LEFT;
+                    mContentEdt.setBackgroundColor(Color.parseColor("#000000"));
+                    mContentEdt.setGravity(Gravity.LEFT);
+                    break;
+                case 10: // Bottom center
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.CENTER_HORIZONTAL, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                    mContentEdt.setBackgroundColor(Color.parseColor("#000000"));
+                    mContentEdt.setGravity(Gravity.CENTER);
+                    break;
+                case 11: // Bottom right
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+//                lapText.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                    lapText.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+                    mContentEdt.setBackgroundColor(Color.parseColor("#000000"));
+                    mContentEdt.setGravity(Gravity.RIGHT);
+                    break;
+                default:
+            }
+            mContentEdt.setLayoutParams(lapText);
+            mContentEdt.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mContentEdt.reAdjust();
+                }
+            }, 50);
+            recreateSizeDrawView();
+        }
+    };
 
     public int getStateCrop() {
         return stateCrop;
@@ -536,14 +653,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (width <= 0) width = 720;
         if (height <= 0) height = 1280;
         if (getStateCrop() == 1) {
-            height = (int) (((width * 9f) / 16f) / getResources().getDisplayMetrics().density);
+            height = (int) (((width * 9f) / 16f)) - (int)(20 * getResources().getDisplayMetrics().density);
         } else if (getStateCrop() == 0) {
-            height = (int) (((width * 9f) / 16f));
+            height = width - (int)(20 * getResources().getDisplayMetrics().density);
+        }else if(getStateCrop() == 2){
+            height = (int) (((width * 16f) / 9f)) - (int)(200 * getResources().getDisplayMetrics().density);
         }
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.MATCH_PARENT,
-                height);
-        lp.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) mTextAroundLl.getLayoutParams();
+        lp.height = height;
+        mTextAroundLl.setLayoutParams(lp);
+        Log.d("TAG", lp.height + "");
     }
 
     static final int REQUEST_TAKE_PHOTO = 1;
@@ -673,12 +792,79 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             int bitmap2Height = cropBitmap.getHeight();
             Canvas canvas = new Canvas(overlayBitmap);
             canvas.drawBitmap(cropBitmapImage, new Matrix(), null);
-            canvas.drawBitmap(cropBitmap, bitmap1Width / 2 - bitmap2Width / 2, bitmap1Height / 2 - bitmap2Height / 2, null);
+            int top = 0;
+            int left = 0;
+            switch (mCurrentPosition){
+                case 0: // Top Left
+                    top = 0;
+                    left = 0;
+                    break;
+                case 1: // Top center
+                    top = 0;
+                    left = bitmap1Width / 2 - bitmap2Width / 2;
+                    break;
+                case 2: // Top right
+                    top = 0;
+                    left = bitmap1Width - bitmap2Width;
+                    break;
+                case 3: // Center left
+                    top = bitmap1Height / 2 - bitmap2Height / 2;
+                    left = 0;
+                    break;
+                case 4: // Center center
+                    top = bitmap1Height / 2 - bitmap2Height / 2;
+                    left = bitmap1Width / 2 - bitmap2Width / 2;
+                    break;
+                case 5: // Center right
+                    top = bitmap1Height / 2 - bitmap2Height / 2;
+                    left = bitmap1Width - bitmap2Width;
+                    break;
+                case 6: // Bottom Left
+                case 9:
+                    left = 0;
+                    top = bitmap1Height - bitmap2Height;
+                    break;
+                case 7: // Bottom center
+                case 10:
+                    top = bitmap1Height - bitmap2Height;
+                    left = bitmap1Width / 2 - bitmap2Width / 2;
+                    break;
+                case 8: // Bottom right
+                case 11:
+                    top = bitmap1Height - bitmap2Height;
+                    left = bitmap1Width - bitmap2Width;
+                    break;
+                default:
+            }
+            canvas.drawBitmap(cropBitmap, left, top, null);
 
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                overlayBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                byte[] b = baos.toByteArray();
+                String encodedImage = Base64.encodeToString(b, Base64.DEFAULT);
+                if (!TextUtils.isEmpty(encodedImage)) {
+                    encodedImage = "data:image/jpg;base64," + encodedImage;
+                }
+                Log.d("content", mContent);
+                RestClient.uploadImage(encodedImage, mContent, new TextHttpResponseHandler() {
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+
+                    }
+
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, String responseString) {
+
+                    }
+                });
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
             if (id == 0) {
 //                Intent intent = getPackageManager().getLaunchIntentForPackage("com.facebook.katana");
 //                if (intent != null) {
-                    shareFB(overlayBitmap, mContent);
+                shareFB(overlayBitmap, mContent);
 //                } else {
 //                    installApp("com.facebook.katana");
 //                }
@@ -835,6 +1021,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
+            if (isUserChangeText) {
+                isUserChangeText = false;
+                return;
+            }
             mHandler.removeCallbacks(runCheck);
             if (count > 0)
                 mHandler.postDelayed(runCheck, timeDelay);
@@ -1264,4 +1454,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    public void showNotifi(int id, String content, String title) {
+        NotificationManager mNotificationManager = (NotificationManager)
+                getSystemService(Context.NOTIFICATION_SERVICE);
+
+
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(this)
+                        .setSmallIcon(R.drawable.ic_character)
+                        .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_logo))
+                        .setContentTitle(title)
+                        .setAutoCancel(false)
+                        .setStyle(new NotificationCompat.BigTextStyle()
+                                .bigText(content))
+                        .setOngoing(true)
+                        .setContentText(content);
+
+        mNotificationManager.notify(id, mBuilder.build());
+    }
+
+    public void cancelNotifi(int id) {
+        NotificationManager mNotificationManager = (NotificationManager)
+                getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.cancel(id);
+    }
 }

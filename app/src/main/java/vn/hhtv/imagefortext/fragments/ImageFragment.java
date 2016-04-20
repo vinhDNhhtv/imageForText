@@ -5,11 +5,16 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v8.renderscript.Allocation;
+import android.support.v8.renderscript.Element;
+import android.support.v8.renderscript.RenderScript;
+import android.support.v8.renderscript.ScriptIntrinsicBlur;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +27,7 @@ import android.widget.RelativeLayout;
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestCreator;
+import com.squareup.picasso.Target;
 
 import vn.hhtv.imagefortext.main.MainActivity;
 import vn.hhtv.imagefortext.R;
@@ -40,9 +46,15 @@ public class ImageFragment extends Fragment{
     "http://wallpaperswide.com/download/drops_of_water-wallpaper-640x960.jpg"};
     private int color = Color.CYAN;
     String image = "";
+
+    public Image getImageM() {
+        return imageM;
+    }
+
     private Image imageM;
     String text = "nature";
     private ImageView iv;
+    private RelativeLayout rootRl;
 
     public static ImageFragment getInstance(int position){
         ImageFragment fragment = new ImageFragment();
@@ -71,6 +83,7 @@ public class ImageFragment extends Fragment{
         pb.setVisibility(View.VISIBLE);
         pb.getIndeterminateDrawable().setColorFilter(getResources().getColor(R.color.colorAccent), PorterDuff.Mode.SRC_IN);
         iv = (ImageView) v.findViewById(R.id.imageView);
+        rootRl = (RelativeLayout) v.findViewById(R.id.rootRl);
         iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
         iv.setImageResource(R.drawable.bg_background);
         changeView();
@@ -84,7 +97,40 @@ public class ImageFragment extends Fragment{
         }else if(image != null)
         qc = Picasso.with(container.getContext()).load(image);
         if(qc != null){
-            qc.into(iv, new Callback() {
+            Target target = new Target() {
+                @Override
+                public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+                    try {
+//                        RenderScript rs = RenderScript.create(getContext());
+//
+////this will blur the bitmapOriginal with a radius of 8 and save it in bitmapOriginal
+//                        final Allocation input = Allocation.createFromBitmap(rs, bitmap); //use this constructor for best performance, because it uses USAGE_SHARED mode which reuses memory
+//                        final Allocation output = Allocation.createTyped(rs, input.getType());
+//                        final ScriptIntrinsicBlur script = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));
+//                        script.setRadius(0f);
+//                        script.setInput(input);
+//                        script.forEach(output);
+//                        output.copyTo(bitmap);
+                        iv.setImageBitmap(bitmap);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    pb.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onBitmapFailed(Drawable errorDrawable) {
+                    pb.setVisibility(View.GONE);
+                    Picasso.with(inflater.getContext()).load("http://lorempixel.com/" + MainActivity.screenImage + "/" + text).skipMemoryCache().into(iv);
+                }
+
+                @Override
+                public void onPrepareLoad(Drawable placeHolderDrawable) {
+
+                }
+            };
+            qc.into(iv
+                    , new Callback() {
                 @Override
                 public void onSuccess() {
                     pb.setVisibility(View.GONE);
@@ -95,7 +141,8 @@ public class ImageFragment extends Fragment{
                     pb.setVisibility(View.GONE);
                     Picasso.with(inflater.getContext()).load("http://lorempixel.com/" + MainActivity.screenImage + "/" + text).skipMemoryCache().into(iv);
                 }
-            });
+            }
+            );
         }
         return v;
     }
@@ -149,23 +196,38 @@ public class ImageFragment extends Fragment{
             if (display != null) {
                 if (Build.VERSION.SDK_INT >= 13) {
                     display.getSize(point);
-                    mWidth = point.y;
+                    mWidth = point.x;
                 } else {
                     mWidth = display.getWidth();
                 }
             }
         }
-        int mHeight = RelativeLayout.LayoutParams.MATCH_PARENT;
-        if(((MainActivity)getActivity()).getStateCrop() == 1){
-            mHeight = (int)(((mWidth * 9f) / 16f) / getResources().getDisplayMetrics().density);
-        }else if(((MainActivity)getActivity()).getStateCrop() == 0){
-            mHeight = (int)(((mWidth * 9f) / 16f));
+        int mHeight = 0;
+//        if(((MainActivity)getActivity()).getStateCrop() == 1){
+//            mHeight = (int)(((mWidth * 9f) / 16f));
+//        }else if(((MainActivity)getActivity()).getStateCrop() == 0){
+//            mHeight = (int)(((mWidth * 9f) / 16f));
+//        }
+        if (((MainActivity)getActivity()).getStateCrop() == 1) {
+            mHeight = (int) (((mWidth * 9f) / 16f)) - (int)(20 * getResources().getDisplayMetrics().density);
+        } else if (((MainActivity)getActivity()).getStateCrop() == 0) {
+            mHeight = mWidth - (int)(20 * getResources().getDisplayMetrics().density);
+        }else if(((MainActivity)getActivity()).getStateCrop() == 2){
+            mHeight = (int) (((mWidth * 16f) / 9f)) - (int)(20 * getResources().getDisplayMetrics().density);
         }
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.MATCH_PARENT,
-                mHeight);
-        lp.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
-        if(iv != null)
-        iv.setLayoutParams(lp);
+        if(rootRl == null) return;
+        final ViewGroup.LayoutParams lp = (ViewGroup.LayoutParams) iv.getLayoutParams();
+//        lp.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        lp.height = mHeight;
+        final ViewGroup.LayoutParams lpr = (ViewGroup.LayoutParams) rootRl.getLayoutParams();
+//        lp.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+//        lpr.height = mHeight;
+        iv.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                iv.setLayoutParams(lp);
+            }
+        }, 10);
+//        rootRl.setLayoutParams(lpr);
     }
 }

@@ -1,6 +1,7 @@
 package vn.hhtv.imagefortext.api;
 
 import android.content.Context;
+import android.text.TextUtils;
 
 import com.loopj.android.http.FileAsyncHttpResponseHandler;
 import com.loopj.android.http.RequestHandle;
@@ -34,5 +35,13 @@ public class RestClient {
         params.add(ApiConfig.KEY_TEXT, text);
         params.add(ApiConfig.KEY_SIZE, MainActivity.screenResolution);
         return LoopjRestClient.getWithHandle(ApiConfig.SEARCH_URL, params, responseHandler);
+    }
+
+    public static void uploadImage(String encodedImage, String content, TextHttpResponseHandler responseHandler){
+        if(TextUtils.isEmpty(encodedImage)) return;
+        RequestParams params = new RequestParams();
+        params.add(ApiConfig.KEY_IMAGE, encodedImage);
+        params.add(ApiConfig.KEY_TEXT, content);
+        LoopjRestClient.post(ApiConfig.UPLOAD_URL, params, responseHandler);
     }
 }

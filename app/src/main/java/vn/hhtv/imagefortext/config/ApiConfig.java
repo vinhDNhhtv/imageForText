@@ -14,11 +14,13 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class ApiConfig {
 
-    public static final String ROOT_URL = "http://igo10.hhtv.vn/a1/"; // DEV
-    public static final String SEARCH_URL = ROOT_URL + "search";
+    public static final String ROOT_URL = "http://igo10.hhtv.vn/"; // DEV
+    public static final String SEARCH_URL = ROOT_URL + "a1/search";
 
     public static final String KEY_TEXT = "text";
     public static final String KEY_SIZE = "size";
+    public static final String KEY_IMAGE = "image";
+    public static final String UPLOAD_URL = ROOT_URL + "a1/post";
 
     public static final String getKKyo(){
         long ss = System.currentTimeMillis() - 450431850278l;

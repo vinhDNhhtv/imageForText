@@ -62,7 +62,7 @@ public class AutoResizeEditText extends EditText {
         super(context, attrs, defStyle);
         // using the minimal recommended font size
         _minTextSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
-                12, getResources().getDisplayMetrics());
+                5, getResources().getDisplayMetrics());
         _maxTextSize = getTextSize();
         if (_maxLines == 0)
             // no value was assigned during construction
@@ -198,7 +198,7 @@ public class AutoResizeEditText extends EditText {
             public void run() {
                 adjustTextSize();
             }
-        }, 100);
+        }, 50);
 
     }
 

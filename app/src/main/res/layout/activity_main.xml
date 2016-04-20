@@ -34,33 +34,34 @@
             android:visibility="gone" />
 
         <LinearLayout
+            android:id="@+id/textAround"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="300dp"
+            android:layout_centerInParent="true"
             android:orientation="vertical">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="0.2" />
+            <!--<View-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="0dp"-->
+                <!--android:layout_weight="0.2" />-->
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1.2"
+                android:layout_height="match_parent"
                 android:orientation="horizontal">
 
                 <View
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="0.2" />
+                    android:id="@+id/right_edt"
+                    android:layout_width="10dp"
+                    android:layout_height="match_parent"/>
 
                 <FrameLayout
                     android:id="@+id/container"
                     android:layout_width="0dp"
-                    android:layout_height="400dp"
+                    android:layout_height="match_parent"
                     android:layout_centerInParent="true"
                     android:layout_gravity="center"
-                    android:layout_weight="1.4">
+                    android:layout_weight="1">
 
                     <vn.hhtv.imagefortext.widget.AutoResizeEditText
                         android:id="@+id/editText"
@@ -83,15 +84,15 @@
                 </FrameLayout>
 
                 <View
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="0.2" />
+                    android:id="@+id/left_edt"
+                    android:layout_width="10dp"
+                    android:layout_height="match_parent"/>
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="0.2" />
+            <!--<View-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="0dp"-->
+                <!--android:layout_weight="0.2" />-->
         </LinearLayout>
 
         <TextView
@@ -139,11 +140,20 @@
             android:orientation="horizontal"
             android:visibility="gone">
 
+            <ImageView
+                android:id="@+id/edit_content_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:padding="10dp"
+                android:layout_marginLeft="5dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_share" />
+
             <EditText
                 android:id="@+id/editText_search"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="30dp"
+                android:layout_marginLeft="5dp"
                 android:layout_marginRight="10dp"
                 android:layout_weight="1"
                 android:background="@drawable/underline_white"
