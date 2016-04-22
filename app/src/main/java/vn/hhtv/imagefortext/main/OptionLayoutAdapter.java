@@ -231,7 +231,9 @@ public class OptionLayoutAdapter extends RecyclerView.Adapter<OptionLayoutAdapte
         }, 50);
         if (listener != null) {
             holder.rootView.setTag(position);
+            holder.mTextEdt.setTag(position);
             holder.rootView.setOnClickListener(listener);
+            holder.mTextEdt.setOnClickListener(listener);
         }
     }
 

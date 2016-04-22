@@ -374,8 +374,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                    mCLayoutParams.height = (int) (mViewPager.getHeight() * density * 9 / 10);
 //                    mContainer.setLayoutParams(mCLayoutParams);
                     mContentEdt.setHeightLimit(height / 4);
-                    lflp.width = (int)(20 * density);
-                    lrlp.width = (int)(20 * density);
+                    lflp.width = (int) (20 * density);
+                    lrlp.width = (int) (20 * density);
                 } else {
                     mViewPager.setPadding(30, 0, 30, 0);
                     if (stateCrop == 1) {
@@ -387,10 +387,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        mContainer.setLayoutParams(mCLayoutParams);
                         mContentEdt.setHeightLimit(height / 4);
                     }
-                    lflp.width = (int)(10 * density);
-                    lrlp.width = (int)(10 * density);
+                    lflp.width = (int) (10 * density);
+                    lrlp.width = (int) (10 * density);
                 }
-                mContentEdt.reAdjust();
+//                mContentEdt.reAdjust();
                 leftEdt.setLayoutParams(lflp);
                 rightEdt.setLayoutParams(lrlp);
                 if (mPageAdapter != null)
@@ -653,12 +653,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (width <= 0) width = 720;
         if (height <= 0) height = 1280;
         if (getStateCrop() == 1) {
-            height = (int) (((width * 9f) / 16f)) - (int)(20 * getResources().getDisplayMetrics().density);
+            height = (int) (((width * 9f) / 16f)) - (int) (20 * getResources().getDisplayMetrics().density);
         } else if (getStateCrop() == 0) {
-            height = width - (int)(20 * getResources().getDisplayMetrics().density);
-        }else if(getStateCrop() == 2){
-            height = (int) (((width * 16f) / 9f)) - (int)(200 * getResources().getDisplayMetrics().density);
+            height = width - (int) (20 * getResources().getDisplayMetrics().density);
+        } else if (getStateCrop() == 2) {
+            height = (int) (((width * 16f) / 9f)) - (int) (200 * getResources().getDisplayMetrics().density);
         }
+        mContentEdt.setHeightLimit(height * 2 / 5);
+        mContentEdt.reAdjust();
         RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) mTextAroundLl.getLayoutParams();
         lp.height = height;
         mTextAroundLl.setLayoutParams(lp);
@@ -778,6 +780,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 width = display.getWidth();
                 height = display.getHeight();
             }
+            if (getStateCrop() != 2)
+                width -= (int) (10 * density) * 2;
+            else width -= (int) (20 * density) * 2;
             float scale_factor = (float) bitmap1Width / width;
             Matrix matrix = new Matrix();
             matrix.postScale(scale_factor, scale_factor);
@@ -794,7 +799,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             canvas.drawBitmap(cropBitmapImage, new Matrix(), null);
             int top = 0;
             int left = 0;
-            switch (mCurrentPosition){
+            switch (mCurrentPosition) {
                 case 0: // Top Left
                     top = 0;
                     left = 0;
