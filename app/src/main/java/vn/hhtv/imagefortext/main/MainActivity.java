@@ -867,12 +867,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 ex.printStackTrace();
             }
             if (id == 0) {
-//                Intent intent = getPackageManager().getLaunchIntentForPackage("com.facebook.katana");
-//                if (intent != null) {
                 shareFB(overlayBitmap, mContent);
-//                } else {
-//                    installApp("com.facebook.katana");
-//                }
             } else if (id == 1) {
                 Intent intent = getPackageManager().getLaunchIntentForPackage("com.twitter.android");
                 if (intent == null) {
